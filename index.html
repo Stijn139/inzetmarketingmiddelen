@@ -3,26 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leveranciers Marketing Planner — Technische Unie</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2300843D'/><text x='50%%' y='55%%' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='800' font-size='14'>TU</text></svg>">
+  <title>Inzet Marketingmiddelen — Technische Unie</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23007c31'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial' font-weight='800' font-size='14'>TU</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--tu:#00843D;--tu2:#005C2A;--tu3:#003D1A;--tul:#E6F4EC;--tug:rgba(0,132,61,.06);--bg:#FAFBFC;--s:#FFF;--s2:#F5F7F6;--b:#E8ECE9;--b2:#D1D9D4;--t:#111B16;--t2:#3D5347;--t3:#7A8F83;--r:#DC3545;--rb:#FEF2F2;--bl:#2563EB;--blb:#EFF6FF;--p:#7C3AED;--pb:#F5F3FF;--a:#D97706;--ab:#FFFBEB;--rd:14px;--rds:10px;--rdx:7px;--sh:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03);--shl:0 4px 16px rgba(0,0,0,.06),0 12px 40px rgba(0,0,0,.04);--shx:0 8px 30px rgba(0,0,0,.08),0 20px 60px rgba(0,0,0,.06)}
+    :root{--tu:#007c31;--tu2:#005a23;--tu3:#003d17;--tul:#e9f5ee;--tug:rgba(0,124,49,.05);--bg:#fff;--bg2:#fafafa;--s:#fff;--s2:#f5f5f5;--b:#e5e5e5;--b2:#d4d4d4;--t:#171717;--t2:#525252;--t3:#a3a3a3;--r:#ef4444;--rb:#fef2f2;--bl:#3b82f6;--blb:#eff6ff;--p:#7c3aed;--pb:#f5f3ff;--a:#f59e0b;--ab:#fffbeb;--rd:8px;--rds:6px;--rdx:5px;--sh:0 1px 2px rgba(0,0,0,.05);--shx:0 10px 40px rgba(0,0,0,.12)}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased}
-    @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fi{from{opacity:0}to{opacity:1}}
-    @keyframes sd{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes sh{0%%{background-position:-200%% 0}100%%{background-position:200%% 0}}
-    .ai{animation:fu .35s cubic-bezier(.16,1,.3,1) forwards;opacity:0}
-    .fi{animation:fi .25s ease forwards}
-    .sd{animation:sd .2s ease forwards}
-    .sk{background:linear-gradient(90deg,var(--s2) 25%%,var(--b) 50%%,var(--s2) 75%%);background-size:200%% 100%%;animation:sh 1.5s infinite;border-radius:var(--rdx);height:18px}
-    input,select,textarea{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--t);border:1.5px solid var(--b);border-radius:var(--rdx);padding:10px 14px;background:var(--s);outline:none;width:100%%;transition:all .15s}
-    input:focus,select:focus{border-color:var(--tu);box-shadow:0 0 0 3px var(--tug)}
-    select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%%237A8F83' stroke-width='2'%%3E%%3Cpolyline points='6 9 12 15 18 9'/%%3E%%3C/svg%%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+    body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);font-size:14px;-webkit-font-smoothing:antialiased}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes modalIn{from{opacity:0}to{opacity:1}}
+    @keyframes modalSlide{from{opacity:0;transform:scale(.98) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    .anim{animation:fadeIn .25s ease both}
+    .sk{background:linear-gradient(90deg,var(--s2) 25%,var(--b) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:14px}
+    input,select,textarea{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;color:var(--t);border:1px solid var(--b);border-radius:var(--rdx);padding:8px 12px;background:var(--s);outline:none;width:100%;transition:border-color .15s,box-shadow .15s}
+    input:focus,select:focus{border-color:var(--tu);box-shadow:0 0 0 2px var(--tug)}
+    select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+    table{width:100%;border-collapse:collapse}
   </style>
 </head>
 <body>
@@ -74,7 +73,7 @@ const stm={Concept:{bg:"var(--blb)",fg:"var(--bl)"},Actief:{bg:"var(--tul)",fg:"
 function Badge({children,status}){const c=stm[status||children]||{bg:"var(--s2)",fg:"var(--t2)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px 3px 8px",borderRadius:99,fontSize:12,fontWeight:600,background:c.bg,color:c.fg,whiteSpace:"nowrap"}}><span style={{width:6,height:6,borderRadius:99,background:c.fg,flexShrink:0}}/>{status||children}</span>}
 
 function Btn({children,primary,danger,small,disabled,onClick,style:sx={}}){
-  const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?12:13,opacity:disabled?.45:1,letterSpacing:".01em"};
+  const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?12:13,opacity:disabled?.45:1,letterSpacing:".01em"};
   const v=primary?{background:"var(--tu)",color:"#fff",boxShadow:"0 1px 3px rgba(0,132,61,.2),inset 0 1px 0 rgba(255,255,255,.1)"}:danger?{background:"transparent",color:"var(--r)",border:"1.5px solid var(--r)"}:{background:"var(--s)",color:"var(--t2)",border:"1.5px solid var(--b)",boxShadow:"var(--sh)"};
   return <button style={{...base,...v,...sx}} disabled={disabled} onClick={onClick}>{children}</button>
 }
@@ -145,8 +144,8 @@ function MiddelenPage({toast}){
     </Card>
     <Card style={{marginBottom:20}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 24px",borderBottom:"1px solid var(--b)"}}><h3 style={{fontSize:15,fontWeight:700}}>Capaciteit</h3><Btn small primary onClick={()=>setCapModal("new")}>+ Periode</Btn></div>
-      {mCaps.length===0?<Empty icon="📊" text="Nog geen capaciteitsperiodes"/>:<div style={{padding:"4px 0"}}>{mCaps.map((c,i)=>{const av=c.totale_capaciteit-c.gereserveerd;const dlPassed=c.deadline&&new Date(c.deadline)<new Date();return <div key={c.id} style={{display:"flex",alignItems:"center",padding:"14px 24px",borderBottom:i<mCaps.length-1?"1px solid var(--b)":"none",gap:20}}>
-        <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{c.naam||`${c.periode_start} → ${c.periode_eind}`}</div><div style={{display:"flex",gap:14,fontSize:12,color:"var(--t3)",marginBottom:4}}><span>Periode: {c.periode_start} → {c.periode_eind}</span>{c.publicatiedatum&&<span>Publicatie: <strong style={{color:"var(--t2)"}}>{c.publicatiedatum}</strong></span>}{c.deadline&&<span>Deadline: <strong style={{color:dlPassed?"var(--r)":"var(--a)"}}>{c.deadline}</strong></span>}</div><div style={{maxWidth:220}}><CapBar used={c.gereserveerd} total={c.totale_capaciteit}/></div></div>
+      {mCaps.length===0?<Empty icon="📊" text="Nog geen capaciteitsperiodes"/>:<div style={{padding:"4px 0"}}>{mCaps.map((c,i)=>{const av=c.totale_capaciteit-c.gereserveerd;return <div key={c.id} style={{display:"flex",alignItems:"center",padding:"14px 24px",borderBottom:i<mCaps.length-1?"1px solid var(--b)":"none",gap:20}}>
+        <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{c.periode_start} → {c.periode_eind}</div><div style={{maxWidth:220}}><CapBar used={c.gereserveerd} total={c.totale_capaciteit}/></div></div>
         <div style={{textAlign:"right",minWidth:80}}><div style={{fontSize:20,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:av<=0?"var(--r)":"var(--t)"}}>{av}</div><div style={{fontSize:11,color:"var(--t3)"}}>beschikbaar</div></div>
         <div style={{display:"flex",gap:6}}><Btn small onClick={()=>setCapModal(c)}>✎</Btn><Btn small danger onClick={()=>delCap(c)}>✕</Btn></div>
       </div>})}</div>}
@@ -160,9 +159,9 @@ function MiddelenPage({toast}){
     <Filters vals={f} onChange={(k,v)=>setF(p=>({...p,[k]:v}))} defs={[{key:"rubriek",placeholder:"Alle rubrieken",opts:rubs},{key:"segment",placeholder:"Alle segmenten",opts:segs},{key:"type_campagne",placeholder:"Alle types",opts:tcs},{key:"beschikbaar",placeholder:"Beschikbaarheid",opts:["beschikbaar","vol"]}]}/>
     {loading?<Card style={{padding:0}}>{[...Array(4)].map((_,i)=><div key={i} style={{padding:"16px 20px",borderBottom:"1px solid var(--b)"}}><div className="sk" style={{width:"60%",marginBottom:8}}/><div className="sk" style={{width:"30%"}}/></div>)}</Card>:
     filtered.length===0?<Card><Empty icon="📦" text="Geen middelen gevonden"/></Card>:
-    <Card style={{padding:0}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Pakketnaam</Th><Th>Rubriek</Th><Th>Periode</Th><Th>Deadline</Th><Th>Tarief</Th><Th>Capaciteit</Th></tr></thead><tbody>
+    <Card style={{padding:0}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Pakketnaam</Th><Th>Rubriek</Th><Th>Segment</Th><Th>Type</Th><Th>Tarief</Th><Th>Capaciteit</Th></tr></thead><tbody>
       {filtered.map(m=>{const c=getCap(caps,m.id);return <tr key={m.id} onClick={()=>setDetail(m)} style={{cursor:"pointer",borderBottom:"1px solid var(--b)",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-        <Td bold>{m.pakketnaam}</Td><Td>{m.rubriek}</Td><Td style={{fontSize:12}}>{m.startdatum&&m.einddatum?<span>{m.startdatum} → {m.einddatum}</span>:<span style={{color:"var(--t3)"}}>—</span>}</Td><Td style={{fontSize:12}}>{m.deadline?<span style={{color:new Date(m.deadline)<new Date()?"var(--r)":"var(--a)",fontWeight:600}}>{m.deadline}</span>:<span style={{color:"var(--t3)"}}>—</span>}</Td><Td mono>€{fmt(m.tarief)}</Td><Td style={{width:140}}><CapBar used={c.used} total={c.total}/></Td>
+        <Td bold>{m.pakketnaam}</Td><Td>{m.rubriek}</Td><Td>{m.segment}</Td><Td>{m.type_campagne}</Td><Td mono>€{fmt(m.tarief)}</Td><Td style={{width:160}}><CapBar used={c.used} total={c.total}/></Td>
       </tr>})}
     </tbody></table></Card>}
     {modal&&<MiddelForm item={typeof modal==="object"?modal:null} onSave={save} onClose={()=>setModal(null)}/>}
@@ -241,7 +240,7 @@ function PlannersPage({toast,role}){
     const full=await db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",eq:{id:pl.id}});setDetail(full[0]);loadPm(pl.id);load()
   }catch(e){toast(e.message,"error")}}
 
-  async function addMiddel(mid){try{if(pm.find(x=>x.marketingmiddel_id===mid)){toast("Al gekoppeld","error");return}const mdl=await db.get("marketingmiddel",{eq:{id:mid}});const m=mdl[0]||{};await db.post("planner_marketingmiddel",{planner_id:detail.id,marketingmiddel_id:mid,status:"Gepland",startdatum:m.startdatum||null,einddatum:m.einddatum||null,deadline:m.deadline||null});const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:mid}});const now=new Date().toISOString().slice(0,10);const cur=cs.find(c=>c.periode_start<=now&&c.periode_eind>=now)||cs[0];if(cur)await db.patch("marketingmiddel_capaciteit",cur.id,{gereserveerd:cur.gereserveerd+1});toast("Toegevoegd");setSelModal(false);loadPm(detail.id)}catch(e){toast(e.message,"error")}}
+  async function addMiddel(mid){try{if(pm.find(x=>x.marketingmiddel_id===mid)){toast("Al gekoppeld","error");return}const mdl=await db.get("marketingmiddel",{eq:{id:mid}});const mm=mdl[0]||{};await db.post("planner_marketingmiddel",{planner_id:detail.id,marketingmiddel_id:mid,status:"Gepland",startdatum:mm.startdatum||null,einddatum:mm.einddatum||null,deadline:mm.deadline||null});const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:mid}});const now=new Date().toISOString().slice(0,10);const cur=cs.find(c=>c.periode_start<=now&&c.periode_eind>=now)||cs[0];if(cur)await db.patch("marketingmiddel_capaciteit",cur.id,{gereserveerd:cur.gereserveerd+1});toast("Toegevoegd");setSelModal(false);loadPm(detail.id)}catch(e){toast(e.message,"error")}}
 
   async function rmMiddel(row){if(!confirm(`"${row.marketingmiddel?.pakketnaam}" verwijderen?`))return;try{if(row.status==="Gepland"||row.status==="In uitvoering"){const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:row.marketingmiddel_id}});for(const c of cs)if(c.gereserveerd>0)await db.patch("marketingmiddel_capaciteit",c.id,{gereserveerd:c.gereserveerd-1})}await db.del("planner_marketingmiddel",row.id);toast("Verwijderd");loadPm(detail.id)}catch(e){toast(e.message,"error")}}
 
@@ -313,85 +312,49 @@ function PlannerForm({levs,onSave,onClose}){
 
 function PmRow({row,locked,onUpdate,onRemove,last}){
   const[edit,setEdit]=useState(false);const[d,setD]=useState({voortgang:row.voortgang,status:row.status});
-  const dlPassed=row.deadline&&new Date(row.deadline)<new Date();
-  if(edit)return <div style={{padding:"20px 24px",borderBottom:last?"none":"1px solid var(--b)",background:"var(--tug)"}}>
-    <div style={{fontWeight:700,marginBottom:6}}>{row.marketingmiddel?.pakketnaam}</div>
-    <div style={{display:"flex",gap:16,fontSize:12,color:"var(--t3)",marginBottom:14,padding:"8px 12px",background:"var(--s2)",borderRadius:"var(--rdx)"}}>
+  const dlP=row.deadline&&new Date(row.deadline)<new Date();
+  if(edit)return <div style={{padding:"16px 20px",borderBottom:last?"none":"1px solid var(--b)",background:"var(--bg2)"}}>
+    <div style={{fontWeight:600,marginBottom:4}}>{row.marketingmiddel?.pakketnaam}</div>
+    <div style={{display:"flex",gap:12,fontSize:12,color:"var(--t3)",marginBottom:12,padding:"6px 10px",background:"var(--s)",borderRadius:"var(--rdx)",border:"1px solid var(--b)"}}>
       {row.startdatum&&<span>Start: <strong style={{color:"var(--t2)"}}>{row.startdatum}</strong></span>}
       {row.einddatum&&<span>Eind: <strong style={{color:"var(--t2)"}}>{row.einddatum}</strong></span>}
-      {row.deadline&&<span>Deadline: <strong style={{color:dlPassed?"var(--r)":"var(--a)"}}>{row.deadline}</strong></span>}
+      {row.deadline&&<span>Deadline: <strong style={{color:dlP?"var(--r)":"var(--a)"}}>{row.deadline}</strong></span>}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 14px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
       <Field label="Voortgang (%)"><input type="number" min="0" max="100" value={d.voortgang} onChange={e=>setD(p=>({...p,voortgang:Math.min(100,Math.max(0,parseInt(e.target.value)||0))}))}/></Field>
       <Field label="Status"><select value={d.status} onChange={e=>setD(p=>({...p,status:e.target.value}))}>{["Gepland","In uitvoering","Afgerond","Geannuleerd"].map(s=><option key={s}>{s}</option>)}</select></Field>
     </div>
-    <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}><Btn small onClick={()=>setEdit(false)}>Annuleren</Btn><Btn small primary onClick={()=>{onUpdate(row,d);setEdit(false)}}>Opslaan</Btn></div>
+    <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}><Btn small onClick={()=>setEdit(false)}>Annuleren</Btn><Btn small primary onClick={()=>{onUpdate(row,d);setEdit(false)}}>Opslaan</Btn></div>
   </div>;
 
-  return <div style={{display:"flex",alignItems:"center",padding:"16px 24px",borderBottom:last?"none":"1px solid var(--b)",gap:16,transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+  return <div style={{display:"flex",alignItems:"center",padding:"12px 20px",borderBottom:last?"none":"1px solid var(--b)",gap:14,transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
     <div style={{flex:1}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{fontWeight:600,fontSize:14}}>{row.marketingmiddel?.pakketnaam}</span><Badge status={row.status}/></div>
-      <div style={{display:"flex",gap:16,fontSize:12,color:"var(--t3)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{row.marketingmiddel?.pakketnaam}</span><Badge status={row.status}/></div>
+      <div style={{display:"flex",gap:12,fontSize:12,color:"var(--t3)"}}>
         {row.startdatum&&row.einddatum&&<span>{row.startdatum} → {row.einddatum}</span>}
-        {row.deadline&&<span>Deadline: <strong style={{color:dlPassed?"var(--r)":"var(--a)"}}>{row.deadline}</strong></span>}
+        {row.deadline&&<span>Deadline: <strong style={{color:dlP?"var(--r)":"var(--a)"}}>{row.deadline}</strong></span>}
         <span style={{fontFamily:"'JetBrains Mono',monospace"}}>€{fmt(row.marketingmiddel?.tarief||0)}</span>
       </div>
-      <div style={{marginTop:8,maxWidth:240}}><Progress value={row.voortgang}/></div>
+      <div style={{marginTop:6,maxWidth:200}}><Progress value={row.voortgang}/></div>
     </div>
-    {!locked&&<div style={{display:"flex",gap:6}}><Btn small onClick={()=>setEdit(true)}>✎</Btn><Btn small danger onClick={()=>onRemove(row)}>✕</Btn></div>}
+    {!locked&&<div style={{display:"flex",gap:4}}><Btn small onClick={()=>setEdit(true)}>✎</Btn><Btn small danger onClick={()=>onRemove(row)}>✕</Btn></div>}
   </div>
 }
 
 function SelModal({onSelect,onClose,existing,toast}){
-  const[items,setItems]=useState([]);const[caps,setCaps]=useState([]);const[loading,setLoading]=useState(true);const[f,setF]=useState({});const[expanded,setExpanded]=useState({});const[selFormaat,setSelFormaat]=useState({});
+  const[items,setItems]=useState([]);const[caps,setCaps]=useState([]);const[loading,setLoading]=useState(true);const[f,setF]=useState({});
   useEffect(()=>{(async()=>{try{const[m,c]=await Promise.all([db.get("marketingmiddel",{order:"pakketnaam.asc"}),db.get("marketingmiddel_capaciteit")]);setItems(m);setCaps(c)}catch(e){toast(e.message,"error")}setLoading(false)})()},[toast]);
   const rubs=[...new Set(items.map(m=>m.rubriek))];const segs=[...new Set(items.map(m=>m.segment))];
   const fl=items.filter(m=>{if(f.rubriek&&m.rubriek!==f.rubriek)return false;if(f.segment&&m.segment!==f.segment)return false;return true});
-
-  // Group by pakketnaam+rubriek
-  const groups={};
-  fl.forEach(m=>{const key=m.pakketnaam+"|||"+m.rubriek;if(!groups[key])groups[key]={pakketnaam:m.pakketnaam,rubriek:m.rubriek,items:[]};groups[key].items.push(m)});
-  const groupList=Object.values(groups);
-
   return <Modal title="Middel selecteren" onClose={onClose} wide>
     <Filters vals={f} onChange={(k,v)=>setF(p=>({...p,[k]:v}))} defs={[{key:"rubriek",placeholder:"Alle rubrieken",opts:rubs},{key:"segment",placeholder:"Alle segmenten",opts:segs}]}/>
     {loading?<div style={{padding:40,textAlign:"center",color:"var(--t3)"}}>Laden...</div>:
     <div style={{maxHeight:420,overflow:"auto",borderRadius:"var(--rdx)",border:"1px solid var(--b)"}}>
-      {groupList.map((g,gi)=>{
-        const hasMultiple=g.items.length>1;
-        const key=g.pakketnaam+"|||"+g.rubriek;
-        const isExp=expanded[key];
-        // For single-item groups or selected formaat, determine the active item
-        const selId=selFormaat[key];
-        const activeItem=hasMultiple?(selId?g.items.find(x=>x.id===selId):null):g.items[0];
-        const anyLinked=g.items.some(m=>existing.includes(m.id));
-
-        return <div key={key} style={{borderBottom:gi<groupList.length-1?"1px solid var(--b)":"none"}}>
-          <div style={{display:"flex",alignItems:"center",padding:"12px 16px",gap:14}}>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontWeight:600,fontSize:14}}>{g.pakketnaam}</span>
-                {hasMultiple&&<span style={{fontSize:11,color:"var(--t3)",background:"var(--s2)",padding:"1px 8px",borderRadius:99}}>{g.items.length} formaten</span>}
-              </div>
-              <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>
-                {g.rubriek}{g.items[0].startdatum&&g.items[0].einddatum&&<span> · {g.items[0].startdatum} → {g.items[0].einddatum}</span>}{g.items[0].deadline&&<span> · <strong style={{color:"var(--a)"}}>deadline {g.items[0].deadline}</strong></span>}
-              </div>
-              {hasMultiple&&<div style={{marginTop:8}}>
-                <select value={selId||""} onChange={e=>{setSelFormaat(p=>({...p,[key]:e.target.value}))}} style={{width:"auto",minWidth:200,padding:"6px 36px 6px 10px",fontSize:13}}>
-                  <option value="">Kies formaat...</option>
-                  {g.items.map(m=>{const lk=existing.includes(m.id);return <option key={m.id} value={m.id} disabled={lk}>{m.formaat} — €{fmt(m.tarief)}{lk?" (gekoppeld)":""}</option>})}
-                </select>
-              </div>}
-            </div>
-            {!hasMultiple&&(()=>{const m=g.items[0];const c=getCap(caps,m.id);const av=c.total-c.used;const lk=existing.includes(m.id);const vol=av<=0;
-              return <><div style={{width:100}}><CapBar used={c.used} total={c.total}/></div>
-              <div style={{minWidth:60,textAlign:"right"}}><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"var(--t3)"}}>€{fmt(m.tarief)}</span></div>
-              <Btn small primary={!lk&&!vol} disabled={lk} style={vol&&!lk?{background:"var(--a)",color:"#fff"}:{}} onClick={()=>{if(vol&&!confirm("Geen capaciteit! Toch toevoegen?"))return;onSelect(m.id)}}>{lk?"Gekoppeld":vol?"Vol → toevoegen":"Toevoegen"}</Btn></>})()}
-            {hasMultiple&&activeItem&&(()=>{const m=activeItem;const c=getCap(caps,m.id);const av=c.total-c.used;const lk=existing.includes(m.id);const vol=av<=0;
-              return <><div style={{width:100}}><CapBar used={c.used} total={c.total}/></div>
-              <Btn small primary={!lk&&!vol} disabled={lk} style={vol&&!lk?{background:"var(--a)",color:"#fff"}:{}} onClick={()=>{if(vol&&!confirm("Geen capaciteit! Toch toevoegen?"))return;onSelect(m.id)}}>{lk?"Gekoppeld":vol?"Vol → toevoegen":"Toevoegen"}</Btn></>})()}
-            {hasMultiple&&!activeItem&&<Btn small disabled>Kies formaat</Btn>}
-          </div>
+      {fl.map((m,i)=>{const c=getCap(caps,m.id);const av=c.total-c.used;const lk=existing.includes(m.id);const vol=av<=0;
+        return <div key={m.id} style={{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<fl.length-1?"1px solid var(--b)":"none",opacity:lk?.4:1,gap:14}}>
+          <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{m.pakketnaam}{lk&&<span style={{fontSize:11,color:"var(--t3)"}}> (gekoppeld)</span>}</div><div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{m.rubriek} · {m.segment} · €{fmt(m.tarief)}</div></div>
+          <div style={{width:120}}><CapBar used={c.used} total={c.total}/></div>
+          <Btn small primary={!lk&&!vol} disabled={lk} style={vol&&!lk?{background:"var(--a)",color:"#fff"}:{}} onClick={()=>{if(vol&&!confirm("Geen capaciteit! Toch toevoegen?"))return;onSelect(m.id)}}>{lk?"Gekoppeld":vol?"Vol → toevoegen":"Toevoegen"}</Btn>
         </div>})}
     </div>}
   </Modal>
@@ -404,37 +367,42 @@ function App(){
   const[page,setPage]=useState("planners");const[role,setRole]=useState("inkoop");const[toast,setToast]=useState(null);const[dbOk,setDbOk]=useState(null);
   const show=useCallback((m,t="success")=>setToast({msg:m,type:t}),[]);
   useEffect(()=>{(async()=>{try{await db.get("leverancier",{limit:1});setDbOk(true)}catch{setDbOk(false)}})()},[]);
-  const nav=[{id:"planners",label:"Planners",icon:"📋"},{id:"middelen",label:"Middelen",icon:"📦"},{id:"leveranciers",label:"Leveranciers",icon:"🏢"}];
+  const nav=[{id:"planners",label:"Planners"},{id:"middelen",label:"Middelen"},{id:"leveranciers",label:"Leveranciers"}];
 
-  return <div style={{minHeight:"100vh",background:"var(--bg)",fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
+  return <div style={{display:"flex",minHeight:"100vh",fontFamily:"'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif"}}>
     
     {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-    <header style={{background:"var(--tu3)",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
-      <div style={{maxWidth:1120,margin:"0 auto",padding:"0 24px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",height:60}}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:34,height:34,borderRadius:9,background:"var(--tu)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13}}>TU</div>
-            <div style={{color:"#fff",fontSize:15,fontWeight:700,letterSpacing:"-.01em"}}>Marketing Planner</div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:14}}>
-            {dbOk===false&&<span style={{background:"var(--r)",color:"#fff",padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:600}}>DB offline</span>}
-            {dbOk===true&&<span style={{background:"rgba(255,255,255,.1)",color:"rgba(255,255,255,.7)",padding:"3px 10px",borderRadius:6,fontSize:11}}>● Online</span>}
-            <div style={{display:"flex",background:"rgba(255,255,255,.08)",borderRadius:8,padding:3,gap:2}}>
-              {[{id:"inkoop",l:"Inkoop"},{id:"marketing",l:"Marketing"}].map(r=><button key={r.id} onClick={()=>setRole(r.id)} style={{padding:"5px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,transition:"all .15s",background:role===r.id?"var(--tu)":"transparent",color:role===r.id?"#fff":"rgba(255,255,255,.55)"}}>{r.l}</button>)}
-            </div>
-          </div>
+    <aside style={{width:220,background:"#fff",borderRight:"1px solid var(--b)",display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
+      <div style={{padding:"16px 18px",borderBottom:"1px solid var(--b)"}}>
+        <img src="https://www.c.technischeunie.nl/content/dam/technische-unie/styleguide1/logo/logoTU.png" alt="TU" style={{height:24}} onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex"}}/>
+        <div style={{display:"none",alignItems:"center",gap:6,fontWeight:700,fontSize:14,color:"var(--tu)"}}><span style={{width:22,height:22,borderRadius:4,background:"var(--tu)",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>TU</span>Technische Unie</div>
+        <div style={{fontSize:12,fontWeight:600,color:"var(--t2)",marginTop:8,letterSpacing:"-.01em"}}>Inzet Marketingmiddelen</div>
+      </div>
+      <nav style={{padding:"12px 10px",flex:1}}>
+        {nav.map(n=><button key={n.id} onClick={()=>setPage(n.id)} style={{display:"flex",alignItems:"center",width:"100%",padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:page===n.id?600:400,background:page===n.id?"var(--tul)":"transparent",color:page===n.id?"var(--tu2)":"var(--t2)",marginBottom:2,transition:"all .1s",textAlign:"left"}}>{n.label}</button>)}
+      </nav>
+      <div style={{padding:"12px 18px",borderTop:"1px solid var(--b)"}}>
+        <div style={{fontSize:11,color:"var(--t3)",marginBottom:8}}>Actieve rol</div>
+        <div style={{display:"flex",background:"var(--s2)",borderRadius:6,padding:2,gap:2}}>
+          {[{id:"inkoop",l:"Inkoop"},{id:"marketing",l:"Marketing"}].map(r=><button key={r.id} onClick={()=>setRole(r.id)} style={{flex:1,padding:"5px 0",borderRadius:4,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,transition:"all .12s",background:role===r.id?"var(--tu)":"transparent",color:role===r.id?"#fff":"var(--t3)"}}>{r.l}</button>)}
         </div>
-        <div style={{display:"flex",gap:2}}>
-          {nav.map(n=><button key={n.id} onClick={()=>setPage(n.id)} style={{padding:"10px 20px",borderRadius:"10px 10px 0 0",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6,transition:"all .15s",background:page===n.id?"var(--bg)":"transparent",color:page===n.id?"var(--t)":"rgba(255,255,255,.5)"}}>{n.icon} {n.label}</button>)}
+        <div style={{marginTop:10,display:"flex",alignItems:"center",gap:5}}>
+          <span style={{width:6,height:6,borderRadius:6,background:dbOk?"var(--tu)":"var(--r)"}}/>
+          <span style={{fontSize:11,color:"var(--t3)"}}>{dbOk?"Database online":"Database offline"}</span>
         </div>
       </div>
-    </header>
-    <main style={{maxWidth:1120,margin:"0 auto",padding:"28px 24px 80px"}}>
-      {dbOk===false&&<Card style={{padding:24,marginBottom:20,borderColor:"var(--r)",borderWidth:2}}><h3 style={{color:"var(--r)",marginBottom:6,fontSize:16}}>Database niet gevonden</h3><p style={{fontSize:14,color:"var(--t2)",lineHeight:1.6}}>Draai het SQL-schema in Supabase → SQL Editor.</p></Card>}
-      {page==="planners"&&<PlannersPage toast={show} role={role}/>}
-      {page==="middelen"&&<MiddelenPage toast={show}/>}
-      {page==="leveranciers"&&<LeveranciersPage toast={show}/>}
-    </main>
+    </aside>
+    <div style={{flex:1,background:"var(--bg2)"}}>
+      <div style={{padding:"12px 28px",borderBottom:"1px solid var(--b)",background:"#fff",fontSize:13,color:"var(--t3)",display:"flex",alignItems:"center",gap:6}}>
+        <span>Home</span><span style={{color:"var(--b2)"}}>›</span><span style={{color:"var(--t)",fontWeight:500}}>{nav.find(n=>n.id===page)?.label}</span>
+      </div>
+      <main style={{padding:"24px 28px 60px"}}>
+        {dbOk===false&&<Card style={{padding:16,marginBottom:16,borderColor:"var(--r)"}}><strong style={{color:"var(--r)"}}>Database niet gevonden</strong><span style={{fontSize:13,color:"var(--t2)",marginLeft:8}}>Draai het SQL-schema in Supabase.</span></Card>}
+        {page==="planners"&&<PlannersPage toast={show} role={role}/>}
+        {page==="middelen"&&<MiddelenPage toast={show}/>}
+        {page==="leveranciers"&&<LeveranciersPage toast={show}/>}
+      </main>
+    </div>
   </div>
 }
 
