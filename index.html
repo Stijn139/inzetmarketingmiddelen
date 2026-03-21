@@ -220,9 +220,10 @@ function PlannersPage({toast,role}){
   const[planners,setPlanners]=useState([]);const[levs,setLevs]=useState([]);const[loading,setLoading]=useState(true);
   const[modal,setModal]=useState(false);const[detail,setDetail]=useState(null);const[pm,setPm]=useState([]);
   const[selModal,setSelModal]=useState(false);const[f,setF]=useState({});const[counts,setCounts]=useState({});
+  const[allPm,setAllPm]=useState([]);const[expanded,setExpanded]=useState({});
   const isMkt=role==="marketing";
 
-  const load=useCallback(async()=>{setLoading(true);try{const[p,l,ap]=await Promise.all([db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",order:"created_at.desc"}),db.get("leverancier",{order:"bedrijfsnaam.asc"}),db.get("planner_marketingmiddel",{select:"planner_id"})]);setPlanners(p);setLevs(l);const c={};ap.forEach(x=>c[x.planner_id]=(c[x.planner_id]||0)+1);setCounts(c)}catch(e){toast(e.message,"error")}setLoading(false)},[toast]);
+  const load=useCallback(async()=>{setLoading(true);try{const[p,l,ap]=await Promise.all([db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",order:"created_at.desc"}),db.get("leverancier",{order:"bedrijfsnaam.asc"}),db.get("planner_marketingmiddel",{select:"*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne,formaat)"})]);setPlanners(p);setLevs(l);setAllPm(ap);const c={};ap.forEach(x=>c[x.planner_id]=(c[x.planner_id]||0)+1);setCounts(c)}catch(e){toast(e.message,"error")}setLoading(false)},[toast]);
   useEffect(()=>{load()},[load]);
 
   const loadPm=useCallback(async pid=>{try{setPm(await db.get("planner_marketingmiddel",{select:"*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne)",eq:{planner_id:pid},order:"created_at.asc"}))}catch(e){toast(e.message,"error")}},[toast]);
@@ -273,21 +274,120 @@ function PlannersPage({toast,role}){
     </div>
   }
 
-  return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-      <div><h2 style={{fontSize:22,fontWeight:700}}>Planners{isMkt&&<span style={{fontSize:13,color:"var(--t3)",fontWeight:400}}> (read-only)</span>}</h2><p style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{filtered.length} planners</p></div>
-      <div style={{display:"flex",gap:8}}>{isMkt&&<Btn onClick={exportCSV}>⬇ Export</Btn>}{!isMkt&&<Btn primary onClick={()=>setModal(true)}>+ Nieuwe planner</Btn>}</div>
+  // LIST — Horizontal card overview
+  const toggleExpand = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
+  const getPmForPlanner = (pid) => allPm.filter(x => x.planner_id === pid);
+  const getTotTarief = (pid) => getPmForPlanner(pid).reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
+  const getAvgVoortgang = (pid) => { const items = getPmForPlanner(pid); return items.length ? Math.round(items.reduce((s, r) => s + r.voortgang, 0) / items.length) : 0; };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div><h2 style={{ fontSize: 16, fontWeight: 700 }}>Planners{isMkt && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2><p style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>{filtered.length} planners</p></div>
+        <div style={{ display: "flex", gap: 6 }}>{isMkt && <Btn onClick={exportCSV}>Export</Btn>}{!isMkt && <Btn primary onClick={() => setModal(true)}>+ Nieuwe planner</Btn>}</div>
+      </div>
+      <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "status", placeholder: "Status", opts: sts }, { key: "type", placeholder: "Type", opts: tps.length ? tps : ["Jaarafspraak", "Campagne", "Incidenteel"] }]} />
+
+      {/* Summary stats */}
+      {!loading && filtered.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+          <Stat label="Totaal planners" value={filtered.length} />
+          <Stat label="Actief" value={filtered.filter(p => p.status === "Actief").length} />
+          <Stat label="Totaal middelen" value={filtered.reduce((s, p) => s + (counts[p.id] || 0), 0)} />
+          <Stat label="Totaal tarief" value={"€" + fmt(filtered.reduce((s, p) => s + getTotTarief(p.id), 0))} />
+        </div>
+      )}
+
+      {loading ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "50%", marginBottom: 6 }} /><div className="sk" style={{ width: "25%" }} /></div>)}</Card> :
+        filtered.length === 0 ? <Card><Empty text="Geen planners gevonden" /></Card> : (
+
+          <Card style={{ padding: 0 }}>
+            {/* Table header */}
+            <table>
+              <thead>
+                <tr>
+                  <Th style={{ width: 30 }}></Th>
+                  <Th>Titel</Th>
+                  <Th>Leverancier</Th>
+                  <Th>Type</Th>
+                  <Th>Status</Th>
+                  <Th>Middelen</Th>
+                  <Th>Tarief</Th>
+                  <Th>Voortgang</Th>
+                  <Th></Th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(p => {
+                  const isOpen = expanded[p.id];
+                  const pItems = getPmForPlanner(p.id);
+                  const totT = getTotTarief(p.id);
+                  const avgV = getAvgVoortgang(p.id);
+                  return (
+                    <React.Fragment key={p.id}>
+                      <tr style={{ borderBottom: isOpen ? "none" : "1px solid var(--b)", transition: "background .1s", background: isOpen ? "var(--tug)" : "transparent" }}>
+                        <td style={{ padding: "10px 6px 10px 14px", width: 30 }}>
+                          <button onClick={() => toggleExpand(p.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--t3)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", transition: "transform .15s", padding: "2px 4px" }}>›</button>
+                        </td>
+                        <Td bold style={{ cursor: "pointer" }}><span onClick={() => setDetail(p)}>{p.titel}</span></Td>
+                        <Td>{p.leverancier?.bedrijfsnaam || "—"}</Td>
+                        <Td>{p.type}</Td>
+                        <Td><Badge status={p.status} /></Td>
+                        <Td mono>{counts[p.id] || 0}</Td>
+                        <Td mono>€{fmt(totT)}</Td>
+                        <Td style={{ width: 130 }}><Progress value={avgV} /></Td>
+                        <Td style={{ width: 40 }}><Btn small ghost onClick={() => setDetail(p)}>→</Btn></Td>
+                      </tr>
+                      {isOpen && pItems.length > 0 && (
+                        <tr style={{ borderBottom: "1px solid var(--b)" }}>
+                          <td colSpan={9} style={{ padding: 0 }}>
+                            <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th style={{ textAlign: "left", padding: "6px 14px 6px 44px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Middel</th>
+                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Periode</th>
+                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Deadline</th>
+                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Tarief</th>
+                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Status</th>
+                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Voortgang</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {pItems.map((item, ii) => {
+                                    const dlP = item.deadline && new Date(item.deadline) < new Date();
+                                    return (
+                                      <tr key={item.id} style={{ borderBottom: ii < pItems.length - 1 ? "1px solid var(--b)" : "none" }}>
+                                        <td style={{ padding: "8px 14px 8px 44px", fontSize: 13, fontWeight: 500 }}>{item.marketingmiddel?.pakketnaam}</td>
+                                        <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? `${item.startdatum} → ${item.einddatum}` : "—"}</td>
+                                        <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{item.deadline}</span> : "—"}</td>
+                                        <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>€{fmt(item.marketingmiddel?.tarief || 0)}</td>
+                                        <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
+                                        <td style={{ padding: "8px 14px", width: 120 }}><Progress value={item.voortgang} /></td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {isOpen && pItems.length === 0 && (
+                        <tr style={{ borderBottom: "1px solid var(--b)" }}>
+                          <td colSpan={9} style={{ padding: "12px 44px", fontSize: 12, color: "var(--t3)", background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>Geen middelen gekoppeld</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        )}
+      {modal && <PlannerForm levs={levs} onSave={create} onClose={() => setModal(false)} />}
     </div>
-    <Filters vals={f} onChange={(k,v)=>setF(p=>({...p,[k]:v}))} defs={[{key:"status",placeholder:"Alle statussen",opts:sts},{key:"type",placeholder:"Alle types",opts:tps.length?tps:["Jaarafspraak","Campagne","Incidenteel"]}]}/>
-    {loading?<Card style={{padding:0}}>{[...Array(4)].map((_,i)=><div key={i} style={{padding:"16px 20px",borderBottom:"1px solid var(--b)"}}><div className="sk" style={{width:"50%",marginBottom:8}}/><div className="sk" style={{width:"25%"}}/></div>)}</Card>:
-    filtered.length===0?<Card><Empty icon="📋" text="Geen planners"/></Card>:
-    <Card style={{padding:0}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Titel</Th><Th>Leverancier</Th><Th>Type</Th><Th>Status</Th><Th>Middelen</Th></tr></thead><tbody>
-      {filtered.map(p=><tr key={p.id} onClick={()=>setDetail(p)} style={{cursor:"pointer",borderBottom:"1px solid var(--b)",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-        <Td bold>{p.titel}</Td><Td>{p.leverancier?.bedrijfsnaam||"—"}</Td><Td>{p.type}</Td><Td><Badge status={p.status}/></Td><Td mono>{counts[p.id]||0}</Td>
-      </tr>)}
-    </tbody></table></Card>}
-    {modal&&<PlannerForm levs={levs} onSave={create} onClose={()=>setModal(false)}/>}
-  </div>
+  );
 }
 
 function PlannerForm({levs,onSave,onClose}){
