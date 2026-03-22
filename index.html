@@ -60,19 +60,16 @@ const db = {
 };
 
 // ============================================================
-// INJECTED CSS
-// ============================================================
-
-// ============================================================
 // ATOMS
 // ============================================================
 const stm={Concept:{bg:"var(--blb)",fg:"var(--bl)"},Actief:{bg:"var(--tul)",fg:"var(--tu2)"},"Afgerond":{bg:"var(--pb)",fg:"var(--p)"},Geannuleerd:{bg:"var(--rb)",fg:"var(--r)"},Gepland:{bg:"var(--ab)",fg:"var(--a)"},"In uitvoering":{bg:"var(--tul)",fg:"var(--tu)"}};
 
 function Badge({children,status}){const c=stm[status||children]||{bg:"var(--s2)",fg:"var(--t2)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px 3px 8px",borderRadius:99,fontSize:12,fontWeight:600,background:c.bg,color:c.fg,whiteSpace:"nowrap"}}><span style={{width:6,height:6,borderRadius:99,background:c.fg,flexShrink:0}}/>{status||children}</span>}
 
-function Btn({children,primary,danger,small,disabled,onClick,style:sx={}}){
+// FIX 1: ghost variant toegevoegd aan Btn
+function Btn({children,primary,danger,small,ghost,disabled,onClick,style:sx={}}){
   const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?13:14,opacity:disabled?0.45:1,letterSpacing:".01em"};
-  const v=primary?{background:"var(--tu)",color:"#fff",boxShadow:"0 1px 3px rgba(0,132,61,.2),inset 0 1px 0 rgba(255,255,255,.1)"}:danger?{background:"transparent",color:"var(--r)",border:"1.5px solid var(--r)"}:{background:"var(--s)",color:"var(--t2)",border:"1.5px solid var(--b)",boxShadow:"var(--sh)"};
+  const v=primary?{background:"var(--tu)",color:"#fff",boxShadow:"0 1px 3px rgba(0,132,61,.2),inset 0 1px 0 rgba(255,255,255,.1)"}:danger?{background:"transparent",color:"var(--r)",border:"1.5px solid var(--r)"}:ghost?{background:"transparent",color:"var(--t3)",border:"none",padding:small?"4px 8px":"7px 14px"}:{background:"var(--s)",color:"var(--t2)",border:"1.5px solid var(--b)",boxShadow:"var(--sh)"};
   return <button style={{...base,...v,...sx}} disabled={disabled} onClick={onClick}>{children}</button>
 }
 
@@ -105,6 +102,9 @@ function Th({children}){return <th style={{textAlign:"left",padding:"11px 16px",
 function Td({children,bold,mono,style:sx}){return <td style={{padding:"12px 16px",fontSize:14,fontWeight:bold?600:400,color:bold?"var(--t)":"var(--t2)",fontFamily:mono?"'JetBrains Mono',monospace":undefined,...sx}}>{children}</td>}
 
 function StatCard({label,value,delay=0}){return <div className="ai" style={{background:"var(--s)",borderRadius:"var(--rds)",border:"1px solid var(--b)",padding:"16px 20px",animationDelay:`${delay}ms`}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",color:"var(--t3)",marginBottom:6}}>{label}</div><div style={{fontSize:28,fontWeight:700,color:"var(--t)",fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{value}</div></div>}
+
+// FIX 2: Stat component toegevoegd (werd gebruikt maar niet gedefinieerd)
+function Stat({label,value}){return <div style={{background:"var(--s)",borderRadius:"var(--rds)",border:"1px solid var(--b)",padding:"14px 18px"}}><div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",color:"var(--t3)",marginBottom:5}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:"var(--t)",fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{value}</div></div>}
 
 // Helpers
 function getCap(caps,mid){const mc=caps.filter(c=>c.marketingmiddel_id===mid);const now=new Date().toISOString().slice(0,10);const cur=mc.find(c=>c.periode_start<=now&&c.periode_eind>=now)||mc[0];return cur?{used:cur.gereserveerd,total:cur.totale_capaciteit,id:cur.id}:{used:0,total:0}}
@@ -274,7 +274,6 @@ function PlannersPage({toast,role}){
     </div>
   }
 
-  // LIST — Horizontal card overview
   const toggleExpand = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
   const getPmForPlanner = (pid) => allPm.filter(x => x.planner_id === pid);
   const getTotTarief = (pid) => getPmForPlanner(pid).reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
@@ -288,7 +287,6 @@ function PlannersPage({toast,role}){
       </div>
       <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "status", placeholder: "Status", opts: sts }, { key: "type", placeholder: "Type", opts: tps.length ? tps : ["Jaarafspraak", "Campagne", "Incidenteel"] }]} />
 
-      {/* Summary stats */}
       {!loading && filtered.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
           <Stat label="Totaal planners" value={filtered.length} />
@@ -300,9 +298,7 @@ function PlannersPage({toast,role}){
 
       {loading ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "50%", marginBottom: 6 }} /><div className="sk" style={{ width: "25%" }} /></div>)}</Card> :
         filtered.length === 0 ? <Card><Empty text="Geen planners gevonden" /></Card> : (
-
           <Card style={{ padding: 0 }}>
-            {/* Table header */}
             <table>
               <thead>
                 <tr>
@@ -336,7 +332,7 @@ function PlannersPage({toast,role}){
                         <Td mono>{counts[p.id] || 0}</Td>
                         <Td mono>€{fmt(totT)}</Td>
                         <Td style={{ width: 130 }}><Progress value={avgV} /></Td>
-                        <Td style={{ width: 40 }}><Btn small ghost onClick={() => setDetail(p)}>→</Btn></Td>
+                        <Td style={{ width: 40 }}><Btn small onClick={() => setDetail(p)}>→</Btn></Td>
                       </tr>
                       {isOpen && pItems.length > 0 && (
                         <tr style={{ borderBottom: "1px solid var(--b)" }}>
@@ -470,7 +466,6 @@ function App(){
   const nav=[{id:"planners",label:"Planners"},{id:"middelen",label:"Middelen"},{id:"leveranciers",label:"Leveranciers"}];
 
   return <div style={{display:"flex",minHeight:"100vh",fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif"}}>
-    
     {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
     <aside style={{width:240,background:"#fff",borderRight:"1px solid var(--b)",display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
       <div style={{padding:"16px 18px",borderBottom:"1px solid var(--b)"}}>
@@ -488,7 +483,7 @@ function App(){
         </div>
         <div style={{marginTop:10,display:"flex",alignItems:"center",gap:5}}>
           <span style={{width:6,height:6,borderRadius:6,background:dbOk?"var(--tu)":"var(--r)"}}/>
-          <span style={{fontSize:11,color:"var(--t3)"}}>{dbOk?"Database online":"Database offline"}</span>
+          <span style={{fontSize:11,color:"var(--t3)"}}>{dbOk===null?"Verbinden...":dbOk?"Database online":"Database offline"}</span>
         </div>
       </div>
     </aside>
