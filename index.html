@@ -7,17 +7,16 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23007c31'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='Arial' font-weight='800' font-size='14'>TU</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--tu:#007c31;--tu2:#005a23;--tu3:#003d17;--tul:#e9f5ee;--tug:rgba(0,124,49,.05);--am:#fdc300;--aml:#fef8e1;--bg:#fff;--bg2:#fafafa;--s:#fff;--s2:#f5f5f5;--b:#e5e5e5;--b2:#d4d4d4;--t:#171717;--t2:#525252;--t3:#a3a3a3;--r:#ef4444;--rb:#fef2f2;--bl:#3b82f6;--blb:#eff6ff;--p:#7c3aed;--pb:#f5f3ff;--a:#f59e0b;--ab:#fffbeb;--rd:8px;--rds:6px;--rdx:5px;--sh:0 1px 2px rgba(0,0,0,.05);--shx:0 10px 40px rgba(0,0,0,.12)}
+    :root{--tu:#007c31;--tu2:#005a23;--tu3:#003d17;--tul:#e9f5ee;--tug:rgba(0,124,49,.05);--bg:#fff;--bg2:#fafafa;--s:#fff;--s2:#f5f5f5;--b:#e5e5e5;--b2:#d4d4d4;--t:#171717;--t2:#525252;--t3:#a3a3a3;--r:#ef4444;--rb:#fef2f2;--bl:#3b82f6;--blb:#eff6ff;--p:#7c3aed;--pb:#f5f3ff;--a:#f59e0b;--ab:#fffbeb;--rd:8px;--rds:6px;--rdx:5px;--sh:0 1px 2px rgba(0,0,0,.05);--shx:0 10px 40px rgba(0,0,0,.12)}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;background:var(--bg);color:var(--t);font-size:15px;-webkit-font-smoothing:antialiased}
     @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes modalIn{from{opacity:0}to{opacity:1}}
-    @keyframes modalSlide{from{opacity:0;transform:scale(.98) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
     @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
     .anim{animation:fadeIn .25s ease both}
     .sk{background:linear-gradient(90deg,var(--s2) 25%,var(--b) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:16px}
     input,select,textarea{font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;font-size:14px;color:var(--t);border:1px solid var(--b);border-radius:var(--rdx);padding:9px 12px;background:var(--s);outline:none;width:100%;transition:border-color .15s,box-shadow .15s}
-    input:focus,select:focus{border-color:var(--tu);box-shadow:0 0 0 2px var(--tug)}
+    input:focus,select:focus,textarea:focus{border-color:var(--tu);box-shadow:0 0 0 2px var(--tug)}
+    textarea{resize:vertical;min-height:72px;line-height:1.5}
     select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
     table{width:100%;border-collapse:collapse}
   </style>
@@ -28,11 +27,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
   <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
+    const { useState, useEffect, useCallback } = React;
 
-// ============================================================
-// SUPABASE
-// ============================================================
 const SB_URL = "https://utxqjgrjyubdsjzzvsnk.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eHFqZ3JqeXViZHNqenp2c25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTgzOTQsImV4cCI6MjA4OTY5NDM5NH0.6g8Ms4p4KP4mYQPuxkxzQvIKN_y8AkDjdl-glI3_JIs";
 const hdrs = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
@@ -43,15 +39,19 @@ const db = {
     if (opts.eq) Object.entries(opts.eq).forEach(([k, v]) => { if (v != null && v !== "") url += `&${k}=eq.${encodeURIComponent(v)}`; });
     if (opts.order) url += `&order=${opts.order}`;
     if (opts.limit) url += `&limit=${opts.limit}`;
-    const r = await fetch(url, { headers: hdrs }); if (!r.ok) throw new Error(await r.text()); return r.json();
+    const r = await fetch(url, { headers: hdrs });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
   async post(table, data) {
     const r = await fetch(`${SB_URL}/rest/v1/${table}`, { method: "POST", headers: { ...hdrs, Prefer: "return=representation" }, body: JSON.stringify(data) });
-    if (!r.ok) throw new Error(await r.text()); return r.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
   async patch(table, id, data) {
     const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, { method: "PATCH", headers: { ...hdrs, Prefer: "return=representation" }, body: JSON.stringify(data) });
-    if (!r.ok) throw new Error(await r.text()); return r.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
   async del(table, id) {
     const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, { method: "DELETE", headers: hdrs });
@@ -59,446 +59,984 @@ const db = {
   }
 };
 
-// ============================================================
-// ATOMS
-// ============================================================
-const stm={Concept:{bg:"var(--blb)",fg:"var(--bl)"},Actief:{bg:"var(--tul)",fg:"var(--tu2)"},"Afgerond":{bg:"var(--pb)",fg:"var(--p)"},Geannuleerd:{bg:"var(--rb)",fg:"var(--r)"},Gepland:{bg:"var(--ab)",fg:"var(--a)"},"In uitvoering":{bg:"var(--tul)",fg:"var(--tu)"}};
+const stm = {
+  Concept: { bg: "var(--blb)", fg: "var(--bl)" },
+  Actief: { bg: "var(--tul)", fg: "var(--tu2)" },
+  Afgerond: { bg: "var(--pb)", fg: "var(--p)" },
+  Geannuleerd: { bg: "var(--rb)", fg: "var(--r)" },
+  Gepland: { bg: "var(--ab)", fg: "var(--a)" },
+  "In uitvoering": { bg: "var(--tul)", fg: "var(--tu)" }
+};
 
-function Badge({children,status}){const c=stm[status||children]||{bg:"var(--s2)",fg:"var(--t2)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px 3px 8px",borderRadius:99,fontSize:12,fontWeight:600,background:c.bg,color:c.fg,whiteSpace:"nowrap"}}><span style={{width:6,height:6,borderRadius:99,background:c.fg,flexShrink:0}}/>{status||children}</span>}
-
-// FIX 1: ghost variant toegevoegd aan Btn
-function Btn({children,primary,danger,small,ghost,disabled,onClick,style:sx={}}){
-  const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?13:14,opacity:disabled?0.45:1,letterSpacing:".01em"};
-  const v=primary?{background:"var(--tu)",color:"#fff",boxShadow:"0 1px 3px rgba(0,132,61,.2),inset 0 1px 0 rgba(255,255,255,.1)"}:danger?{background:"transparent",color:"var(--r)",border:"1.5px solid var(--r)"}:ghost?{background:"transparent",color:"var(--t3)",border:"none",padding:small?"4px 8px":"7px 14px"}:{background:"var(--s)",color:"var(--t2)",border:"1.5px solid var(--b)",boxShadow:"var(--sh)"};
-  return <button style={{...base,...v,...sx}} disabled={disabled} onClick={onClick}>{children}</button>
+function Badge({ children, status }) {
+  const c = stm[status || children] || { bg: "var(--s2)", fg: "var(--t2)" };
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px 3px 8px", borderRadius: 99, fontSize: 12, fontWeight: 600, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>
+    <span style={{ width: 6, height: 6, borderRadius: 99, background: c.fg, flexShrink: 0 }} />{status || children}
+  </span>;
 }
 
-function Card({children,style,delay=0}){return <div className="ai" style={{background:"var(--s)",borderRadius:"var(--rd)",border:"1px solid var(--b)",boxShadow:"var(--sh)",overflow:"hidden",animationDelay:`${delay}ms`,...style}}>{children}</div>}
+function Btn({ children, primary, danger, small, ghost, disabled, onClick, style: sx = {} }) {
+  const base = { display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "Arial,sans-serif", fontWeight: 600, cursor: disabled ? "default" : "pointer", border: "none", transition: "all .15s", borderRadius: small ? "var(--rdx)" : "var(--rds)", padding: small ? "6px 12px" : "9px 18px", fontSize: small ? 13 : 14, opacity: disabled ? 0.45 : 1 };
+  const v = primary ? { background: "var(--tu)", color: "#fff", boxShadow: "0 1px 3px rgba(0,132,61,.2)" }
+    : danger ? { background: "transparent", color: "var(--r)", border: "1.5px solid var(--r)" }
+    : ghost ? { background: "transparent", color: "var(--t3)", border: "none", padding: small ? "4px 8px" : "7px 14px" }
+    : { background: "var(--s)", color: "var(--t2)", border: "1.5px solid var(--b)", boxShadow: "var(--sh)" };
+  return <button style={{ ...base, ...v, ...sx }} disabled={disabled} onClick={onClick}>{children}</button>;
+}
 
-function Modal({title,onClose,children,wide}){return(
-  <div className="fi" style={{position:"fixed",inset:0,background:"rgba(0,20,10,.35)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
-    <div className="sd" style={{background:"var(--s)",borderRadius:18,width:wide?740:540,maxWidth:"96vw",maxHeight:"92vh",overflow:"auto",boxShadow:"var(--shx)"}} onClick={e=>e.stopPropagation()}>
-      <div style={{padding:"20px 24px",borderBottom:"1px solid var(--b)",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:"var(--s)",zIndex:1}}>
-        <h3 style={{fontSize:17,fontWeight:700}}>{title}</h3><Btn small onClick={onClose}>✕</Btn>
+function Card({ children, style }) {
+  return <div className="anim" style={{ background: "var(--s)", borderRadius: "var(--rd)", border: "1px solid var(--b)", boxShadow: "var(--sh)", overflow: "hidden", ...style }}>{children}</div>;
+}
+
+function Modal({ title, onClose, children, wide }) {
+  return <div style={{ position: "fixed", inset: 0, background: "rgba(0,20,10,.35)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }} onClick={onClose}>
+    <div style={{ background: "var(--s)", borderRadius: 18, width: wide ? 740 : 540, maxWidth: "96vw", maxHeight: "92vh", overflow: "auto", boxShadow: "var(--shx)" }} onClick={e => e.stopPropagation()}>
+      <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--b)", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "var(--s)", zIndex: 1 }}>
+        <h3 style={{ fontSize: 17, fontWeight: 700 }}>{title}</h3><Btn small onClick={onClose}>✕</Btn>
       </div>
-      <div style={{padding:24}}>{children}</div>
+      <div style={{ padding: 24 }}>{children}</div>
     </div>
-  </div>
-)}
-
-function Field({label,required,children}){return <div style={{marginBottom:16}}><label style={{display:"block",fontSize:12,fontWeight:600,color:"var(--t3)",marginBottom:5,textTransform:"uppercase",letterSpacing:".06em"}}>{label}{required&&<span style={{color:"var(--r)",marginLeft:2}}>*</span>}</label>{children}</div>}
-
-function CapBar({used,total}){const pct=total>0?(used/total)*100:0;const av=total-used;const cl=av<=0?"var(--r)":av<=3?"var(--a)":"var(--tu)";return <div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1,height:6,borderRadius:99,background:"var(--b)",overflow:"hidden"}}><div style={{width:`${Math.min(pct,100)}%`,height:"100%",borderRadius:99,background:cl,transition:"width .4s cubic-bezier(.16,1,.3,1)"}}/></div><span style={{fontSize:12,fontWeight:600,color:cl,minWidth:44,textAlign:"right",fontFamily:"'JetBrains Mono',monospace"}}>{av}/{total}</span></div>}
-
-function Progress({value}){const cl=value>=100?"var(--p)":"var(--tu)";return <div style={{display:"flex",alignItems:"center",gap:10}}><div style={{flex:1,height:6,borderRadius:99,background:"var(--b)",overflow:"hidden"}}><div style={{width:`${value}%`,height:"100%",borderRadius:99,background:cl,transition:"width .4s cubic-bezier(.16,1,.3,1)"}}/></div><span style={{fontSize:12,fontWeight:600,color:"var(--t3)",fontFamily:"'JetBrains Mono',monospace",minWidth:36,textAlign:"right"}}>{value}%</span></div>}
-
-function Empty({icon,text}){return <div style={{padding:"48px 24px",textAlign:"center",color:"var(--t3)"}}><div style={{fontSize:36,marginBottom:12,opacity:.6}}>{icon}</div><p style={{fontSize:14,lineHeight:1.5}}>{text}</p></div>}
-
-function Toast({msg,type,onClose}){useEffect(()=>{const t=setTimeout(onClose,3200);return()=>clearTimeout(t)},[onClose]);return <div className="sd" style={{position:"fixed",top:16,right:16,zIndex:2000,padding:"12px 20px",borderRadius:12,background:type==="error"?"var(--r)":"var(--tu2)",color:"#fff",fontWeight:600,fontSize:13,boxShadow:"var(--shx)",maxWidth:400,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>{type==="error"?"✕":"✓"}</span>{msg}</div>}
-
-function Filters({defs,vals,onChange}){return <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>{defs.map(f=><select key={f.key} value={vals[f.key]||""} onChange={e=>onChange(f.key,e.target.value)} style={{width:"auto",minWidth:150,padding:"7px 36px 7px 12px",fontSize:14,borderColor:vals[f.key]?"var(--tu)":undefined,background:vals[f.key]?"var(--tul)":undefined}}><option value="">{f.placeholder}</option>{f.opts.map(o=><option key={o} value={o}>{o}</option>)}</select>)}{Object.values(vals).some(v=>v)&&<Btn small onClick={()=>defs.forEach(f=>onChange(f.key,""))}>Wis filters</Btn>}</div>}
-
-function Th({children}){return <th style={{textAlign:"left",padding:"11px 16px",fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",color:"var(--t3)",borderBottom:"1.5px solid var(--b)",background:"var(--s2)"}}>{children}</th>}
-function Td({children,bold,mono,style:sx}){return <td style={{padding:"12px 16px",fontSize:14,fontWeight:bold?600:400,color:bold?"var(--t)":"var(--t2)",fontFamily:mono?"'JetBrains Mono',monospace":undefined,...sx}}>{children}</td>}
-
-function StatCard({label,value,delay=0}){return <div className="ai" style={{background:"var(--s)",borderRadius:"var(--rds)",border:"1px solid var(--b)",padding:"16px 20px",animationDelay:`${delay}ms`}}><div style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",color:"var(--t3)",marginBottom:6}}>{label}</div><div style={{fontSize:28,fontWeight:700,color:"var(--t)",fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{value}</div></div>}
-
-// FIX 2: Stat component toegevoegd (werd gebruikt maar niet gedefinieerd)
-function Stat({label,value}){return <div style={{background:"var(--s)",borderRadius:"var(--rds)",border:"1px solid var(--b)",padding:"14px 18px"}}><div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:".06em",color:"var(--t3)",marginBottom:5}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:"var(--t)",fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{value}</div></div>}
-
-// Helpers
-function getCap(caps,mid){const mc=caps.filter(c=>c.marketingmiddel_id===mid);const now=new Date().toISOString().slice(0,10);const cur=mc.find(c=>c.periode_start<=now&&c.periode_eind>=now)||mc[0];return cur?{used:cur.gereserveerd,total:cur.totale_capaciteit,id:cur.id}:{used:0,total:0}}
-const fmt=n=>Number(n).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});
-function fmtD(d){if(!d)return "—";const p=d.split("-");return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:d}
-function fmtPeriod(s,e){if(!s||!e)return "—";const ms=["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];const ps=s.split("-");const pe=e.split("-");const ys=ps[0];const ye=pe[0];const mms=ms[parseInt(ps[1],10)-1];const mme=ms[parseInt(pe[1],10)-1];return ys===ye?`${mms} – ${mme} ${ys}`:`${mms} ${ys} – ${mme} ${ye}`}
-
-// ============================================================
-// EPIC 1: MARKETINGMIDDELEN
-// ============================================================
-function MiddelenPage({toast}){
-  const[items,setItems]=useState([]);const[caps,setCaps]=useState([]);const[loading,setLoading]=useState(true);
-  const[modal,setModal]=useState(null);const[detail,setDetail]=useState(null);const[capModal,setCapModal]=useState(null);const[f,setF]=useState({});
-
-  const load=useCallback(async()=>{setLoading(true);try{const[m,c]=await Promise.all([db.get("marketingmiddel",{order:"pakketnaam.asc"}),db.get("marketingmiddel_capaciteit",{order:"periode_start.asc"})]);setItems(m);setCaps(c);if(detail)setDetail(prev=>{const u=m.find(x=>x.id===prev?.id);return u||null})}catch(e){toast(e.message,"error")}setLoading(false)},[toast,detail?.id]);
-  useEffect(()=>{load()},[]);
-
-  const rubs=[...new Set(items.map(m=>m.rubriek))];const segs=[...new Set(items.map(m=>m.segment))];const tcs=[...new Set(items.map(m=>m.type_campagne))];
-  const filtered=items.filter(m=>{if(f.rubriek&&m.rubriek!==f.rubriek)return false;if(f.segment&&m.segment!==f.segment)return false;if(f.type_campagne&&m.type_campagne!==f.type_campagne)return false;if(f.beschikbaar==="beschikbaar"){const c=getCap(caps,m.id);if(c.total-c.used<=0)return false}if(f.beschikbaar==="vol"){const c=getCap(caps,m.id);if(c.total-c.used>0)return false}return true});
-
-  async function save(data,eid){try{if(eid){await db.patch("marketingmiddel",eid,data);toast("Bijgewerkt")}else{await db.post("marketingmiddel",data);toast("Aangemaakt")}setModal(null);load()}catch(e){toast(e.message,"error")}}
-  async function remove(m){try{const lnk=await db.get("planner_marketingmiddel",{eq:{marketingmiddel_id:m.id}});const act=lnk.filter(l=>l.status==="Gepland"||l.status==="In uitvoering");if(act.length){toast(`Kan niet: ${act.length} actieve koppeling(en)`,"error");return}if(!confirm(`"${m.pakketnaam}" verwijderen?`))return;for(const c of caps.filter(c=>c.marketingmiddel_id===m.id))await db.del("marketingmiddel_capaciteit",c.id);await db.del("marketingmiddel",m.id);toast("Verwijderd");setDetail(null);load()}catch(e){toast(e.message,"error")}}
-  async function saveCap(data,eid){try{if(eid){await db.patch("marketingmiddel_capaciteit",eid,data);toast("Bijgewerkt")}else{await db.post("marketingmiddel_capaciteit",{...data,marketingmiddel_id:detail.id});toast("Toegevoegd")}setCapModal(null);load()}catch(e){toast(e.message,"error")}}
-  async function delCap(c){if(!confirm("Verwijderen?"))return;try{await db.del("marketingmiddel_capaciteit",c.id);toast("Verwijderd");load()}catch(e){toast(e.message,"error")}}
-
-  if(detail){const mCaps=caps.filter(c=>c.marketingmiddel_id===detail.id);return <div>
-    <button onClick={()=>setDetail(null)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--tu)",marginBottom:20,padding:0}}><span style={{fontSize:18}}>←</span>Terug</button>
-    <Card style={{padding:28,marginBottom:20}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16}}>
-        <div><div style={{fontSize:12,fontWeight:500,color:"var(--t3)",marginBottom:4}}>{detail.rubriek} · {detail.segment}</div><h2 style={{fontSize:20,fontWeight:700}}>{detail.pakketnaam}</h2></div>
-        <div style={{display:"flex",gap:8}}><Btn small onClick={()=>setModal(detail)}>Bewerken</Btn><Btn small danger onClick={()=>remove(detail)}>Verwijderen</Btn></div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16,marginTop:20}}>
-        {[["Formaat",detail.formaat||"—"],["Tarief",`€ ${fmt(detail.tarief)}`],["Type Campagne",detail.type_campagne],["Periode",fmtPeriod(detail.startdatum,detail.einddatum)],["Startdatum",fmtD(detail.startdatum)],["Einddatum",fmtD(detail.einddatum)],["Deadline",fmtD(detail.deadline)]].map(([l,v])=><div key={l}><div style={{fontSize:12,fontWeight:500,color:"var(--t3)",marginBottom:3}}>{l}</div><div style={{fontSize:14,fontWeight:500}}>{v}</div></div>)}
-      </div>
-      {detail.info_link&&<a href={detail.info_link} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:16,fontSize:13,color:"var(--tu)",fontWeight:600,textDecoration:"none"}}>Info →</a>}
-    </Card>
-    <Card style={{marginBottom:20}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 24px",borderBottom:"1px solid var(--b)"}}><h3 style={{fontSize:15,fontWeight:700}}>Capaciteitsperiodes</h3><Btn small primary onClick={()=>setCapModal("new")}>+ Periode</Btn></div>
-      {mCaps.length===0?<Empty text="Nog geen capaciteitsperiodes"/>:<div style={{padding:"4px 0"}}>{mCaps.map((c,i)=>{const av=c.totale_capaciteit-c.gereserveerd;const dlP=c.deadline&&new Date(c.deadline)<new Date();return <div key={c.id} style={{display:"flex",alignItems:"center",padding:"14px 24px",borderBottom:i<mCaps.length-1?"1px solid var(--b)":"none",gap:20}}>
-        <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{c.naam||fmtPeriod(c.periode_start,c.periode_eind)}</div><div style={{display:"flex",gap:14,fontSize:13,color:"var(--t3)"}}><span>{fmtD(c.periode_start)} → {fmtD(c.periode_eind)}</span>{c.publicatiedatum&&<span>Publicatie: <strong style={{color:"var(--t2)"}}>{fmtD(c.publicatiedatum)}</strong></span>}{c.deadline&&<span>Deadline: <strong style={{color:dlP?"var(--r)":"var(--a)"}}>{fmtD(c.deadline)}</strong></span>}</div><div style={{maxWidth:220,marginTop:6}}><CapBar used={c.gereserveerd} total={c.totale_capaciteit}/></div></div>
-        <div style={{textAlign:"right",minWidth:80}}><div style={{fontSize:20,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:av<=0?"var(--r)":"var(--t)"}}>{av}</div><div style={{fontSize:11,color:"var(--t3)"}}>beschikbaar</div></div>
-        <div style={{display:"flex",gap:6}}><Btn small onClick={()=>setCapModal(c)}>✎</Btn><Btn small danger onClick={()=>delCap(c)}>✕</Btn></div>
-      </div>})}</div>}
-    </Card>
-    {modal&&<MiddelForm item={typeof modal==="object"?modal:null} onSave={save} onClose={()=>setModal(null)}/>}
-    {capModal&&<CapForm item={typeof capModal==="object"?capModal:null} onSave={saveCap} onClose={()=>setCapModal(null)}/>}
-  </div>}
-
-  return <div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div><h2 style={{fontSize:22,fontWeight:700}}>Marketingmiddelen</h2><p style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{filtered.length} middelen</p></div><Btn primary onClick={()=>setModal("new")}>+ Nieuw middel</Btn></div>
-    <Filters vals={f} onChange={(k,v)=>setF(p=>({...p,[k]:v}))} defs={[{key:"rubriek",placeholder:"Alle rubrieken",opts:rubs},{key:"segment",placeholder:"Alle segmenten",opts:segs},{key:"type_campagne",placeholder:"Alle types",opts:tcs},{key:"beschikbaar",placeholder:"Beschikbaarheid",opts:["beschikbaar","vol"]}]}/>
-    {loading?<Card style={{padding:0}}>{[...Array(4)].map((_,i)=><div key={i} style={{padding:"16px 20px",borderBottom:"1px solid var(--b)"}}><div className="sk" style={{width:"60%",marginBottom:8}}/><div className="sk" style={{width:"30%"}}/></div>)}</Card>:
-    filtered.length===0?<Card><Empty icon="📦" text="Geen middelen gevonden"/></Card>:
-    <Card style={{padding:0}}><table><thead><tr><Th>Pakketnaam</Th><Th>Formaat</Th><Th>Rubriek</Th><Th>Segment</Th><Th>Periode</Th><Th>Deadline</Th><Th>Tarief</Th></tr></thead><tbody>
-      {filtered.map(m=>{const dlP=m.deadline&&new Date(m.deadline)<new Date();return <tr key={m.id} onClick={()=>setDetail(m)} style={{cursor:"pointer",borderBottom:"1px solid var(--b)",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-        <Td bold>{m.pakketnaam}</Td><Td>{m.formaat||"—"}</Td><Td>{m.rubriek}</Td><Td>{m.segment}</Td><Td>{fmtPeriod(m.startdatum,m.einddatum)}</Td><Td>{m.deadline?<span style={{color:dlP?"var(--r)":"var(--a)",fontWeight:600}}>{fmtD(m.deadline)}</span>:"—"}</Td><Td mono>€{fmt(m.tarief)}</Td>
-      </tr>})}
-    </tbody></table></Card>}
-    {modal&&<MiddelForm item={typeof modal==="object"?modal:null} onSave={save} onClose={()=>setModal(null)}/>}
-  </div>
+  </div>;
 }
 
-function MiddelForm({item,onSave,onClose}){
-  const[d,setD]=useState(item||{pakketnaam:"",rubriek:"",formaat:"",tarief:"",type_campagne:"",segment:"",info_link:"",startdatum:"",einddatum:"",deadline:""});
-  const s=(k,v)=>setD(p=>({...p,[k]:v}));const ok=d.pakketnaam&&d.rubriek&&d.formaat&&Number(d.tarief)>0&&d.type_campagne&&d.segment;
-  return <Modal title={item?"Middel bewerken":"Nieuw marketingmiddel"} onClose={onClose}>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"}}>
-      <Field label="Pakketnaam" required><input value={d.pakketnaam} onChange={e=>s("pakketnaam",e.target.value)}/></Field>
-      <Field label="Rubriek" required><input value={d.rubriek} onChange={e=>s("rubriek",e.target.value)}/></Field>
-      <Field label="Formaat" required><input value={d.formaat} onChange={e=>s("formaat",e.target.value)}/></Field>
-      <Field label="Tarief (€)" required><input type="number" step="0.01" min="0.01" value={d.tarief} onChange={e=>s("tarief",e.target.value)}/></Field>
-      <Field label="Type Campagne" required><input value={d.type_campagne} onChange={e=>s("type_campagne",e.target.value)}/></Field>
-      <Field label="Segment" required><input value={d.segment} onChange={e=>s("segment",e.target.value)}/></Field>
-      <Field label="Info Link"><input value={d.info_link||""} onChange={e=>s("info_link",e.target.value)} placeholder="https://"/></Field><div/>
-      <Field label="Startdatum"><input type="date" value={d.startdatum||""} onChange={e=>s("startdatum",e.target.value||null)}/></Field>
-      <Field label="Einddatum"><input type="date" value={d.einddatum||""} onChange={e=>s("einddatum",e.target.value||null)}/></Field>
-      <Field label="Deadline"><input type="date" value={d.deadline||""} onChange={e=>s("deadline",e.target.value||null)}/></Field>
+function Field({ label, required, children }) {
+  return <div style={{ marginBottom: 16 }}>
+    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--t3)", marginBottom: 5, textTransform: "uppercase", letterSpacing: ".06em" }}>
+      {label}{required && <span style={{ color: "var(--r)", marginLeft: 2 }}>*</span>}
+    </label>
+    {children}
+  </div>;
+}
+
+function CapBar({ used, total }) {
+  const pct = total > 0 ? (used / total) * 100 : 0;
+  const av = total - used;
+  const cl = av <= 0 ? "var(--r)" : av <= 3 ? "var(--a)" : "var(--tu)";
+  return <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ flex: 1, height: 6, borderRadius: 99, background: "var(--b)", overflow: "hidden" }}>
+      <div style={{ width: `${Math.min(pct, 100)}%`, height: "100%", borderRadius: 99, background: cl, transition: "width .4s" }} />
     </div>
-    <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20,paddingTop:16,borderTop:"1px solid var(--b)"}}><Btn onClick={onClose}>Annuleren</Btn><Btn primary disabled={!ok} onClick={()=>{const p={pakketnaam:d.pakketnaam,rubriek:d.rubriek,formaat:d.formaat,tarief:parseFloat(d.tarief),type_campagne:d.type_campagne,segment:d.segment,info_link:d.info_link||null,startdatum:d.startdatum||null,einddatum:d.einddatum||null,deadline:d.deadline||null};onSave(p,item?.id)}}>Opslaan</Btn></div>
-  </Modal>
+    <span style={{ fontSize: 12, fontWeight: 600, color: cl, minWidth: 44, textAlign: "right", fontFamily: "'JetBrains Mono',monospace" }}>{av}/{total}</span>
+  </div>;
 }
 
-function CapForm({item,onSave,onClose}){
-  const[d,setD]=useState(item||{periode_start:"",periode_eind:"",totale_capaciteit:""});
-  const ok=d.periode_start&&d.periode_eind&&d.periode_eind>d.periode_start&&Number(d.totale_capaciteit)>0;
-  return <Modal title={item?"Capaciteit bewerken":"Nieuwe periode"} onClose={onClose}>
-    <Field label="Periode start" required><input type="date" value={d.periode_start} onChange={e=>setD(p=>({...p,periode_start:e.target.value}))}/></Field>
-    <Field label="Periode eind" required><input type="date" value={d.periode_eind} onChange={e=>setD(p=>({...p,periode_eind:e.target.value}))}/></Field>
-    <Field label="Totale capaciteit" required><input type="number" min="1" value={d.totale_capaciteit} onChange={e=>setD(p=>({...p,totale_capaciteit:e.target.value}))}/></Field>
-    <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20,paddingTop:16,borderTop:"1px solid var(--b)"}}><Btn onClick={onClose}>Annuleren</Btn><Btn primary disabled={!ok} onClick={()=>onSave({periode_start:d.periode_start,periode_eind:d.periode_eind,totale_capaciteit:parseInt(d.totale_capaciteit),naam:`${d.periode_start} – ${d.periode_eind}`},item?.id)}>Opslaan</Btn></div>
-  </Modal>
-}
-
-// ============================================================
-// EPIC 2: LEVERANCIERS
-// ============================================================
-function LeveranciersPage({toast}){
-  const[items,setItems]=useState([]);const[loading,setLoading]=useState(true);
-  useEffect(()=>{(async()=>{try{setItems(await db.get("leverancier",{order:"bedrijfsnaam.asc"}))}catch(e){toast(e.message,"error")}setLoading(false)})()},[toast]);
-  return <div><div style={{marginBottom:20}}><h2 style={{fontSize:22,fontWeight:700}}>Leveranciers</h2><p style={{fontSize:13,color:"var(--t3)",marginTop:2}}>SAP sync — read-only</p></div>
-    {loading?<Card style={{padding:0}}>{[...Array(3)].map((_,i)=><div key={i} style={{padding:"16px 20px",borderBottom:"1px solid var(--b)"}}><div className="sk" style={{width:"40%"}}/></div>)}</Card>:
-    <Card style={{padding:0}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Bedrijfsnaam</Th><Th>Nummer</Th><Th>E-mail</Th></tr></thead><tbody>
-      {items.map(l=><tr key={l.id} style={{borderBottom:"1px solid var(--b)"}}><Td bold>{l.bedrijfsnaam}</Td><Td mono>{l.leveranciernummer||"—"}</Td><Td>{l.email}</Td></tr>)}
-    </tbody></table></Card>}
-  </div>
-}
-
-// ============================================================
-// EPIC 3+4: PLANNERS
-// ============================================================
-function PlannersPage({toast,role}){
-  const[planners,setPlanners]=useState([]);const[levs,setLevs]=useState([]);const[loading,setLoading]=useState(true);
-  const[modal,setModal]=useState(false);const[detail,setDetail]=useState(null);const[pm,setPm]=useState([]);
-  const[selModal,setSelModal]=useState(false);const[f,setF]=useState({});const[counts,setCounts]=useState({});
-  const[allPm,setAllPm]=useState([]);const[expanded,setExpanded]=useState({});
-  const isMkt=role==="marketing";
-
-  const load=useCallback(async()=>{setLoading(true);try{const[p,l,ap]=await Promise.all([db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",order:"created_at.desc"}),db.get("leverancier",{order:"bedrijfsnaam.asc"}),db.get("planner_marketingmiddel",{select:"*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne,formaat)"})]);setPlanners(p);setLevs(l);setAllPm(ap);const c={};ap.forEach(x=>c[x.planner_id]=(c[x.planner_id]||0)+1);setCounts(c)}catch(e){toast(e.message,"error")}setLoading(false)},[toast]);
-  useEffect(()=>{load()},[load]);
-
-  const loadPm=useCallback(async pid=>{try{setPm(await db.get("planner_marketingmiddel",{select:"*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne)",eq:{planner_id:pid},order:"created_at.asc"}))}catch(e){toast(e.message,"error")}},[toast]);
-  useEffect(()=>{if(detail)loadPm(detail.id)},[detail,loadPm]);
-
-  const sts=["Concept","Actief","Afgerond","Geannuleerd"];const tps=[...new Set(planners.map(p=>p.type).filter(Boolean))];
-  const filtered=planners.filter(p=>{if(f.status&&p.status!==f.status)return false;if(f.type&&p.type!==f.type)return false;return true});
-
-  async function create(data){try{const res=await db.post("leveranciers_marketing_planner",{...data,status:"Concept"});toast("Planner aangemaakt");setModal(false);load();const full=await db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",eq:{id:res[0].id}});setDetail(full[0])}catch(e){toast(e.message,"error")}}
-
-  async function chgStatus(pl,ns){try{
-    if(ns==="Actief"){const lk=await db.get("planner_marketingmiddel",{eq:{planner_id:pl.id}});if(!lk.length){toast("Min. 1 middel vereist","error");return}}
-    if(ns==="Geannuleerd"){if(!confirm("Annuleren? Alle middelen worden geannuleerd."))return;const lk=await db.get("planner_marketingmiddel",{eq:{planner_id:pl.id}});for(const m of lk.filter(l=>l.status==="Gepland"||l.status==="In uitvoering")){await db.patch("planner_marketingmiddel",m.id,{status:"Geannuleerd"});const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:m.marketingmiddel_id}});for(const c of cs)if(c.gereserveerd>0)await db.patch("marketingmiddel_capaciteit",c.id,{gereserveerd:c.gereserveerd-1})}}
-    await db.patch("leveranciers_marketing_planner",pl.id,{status:ns});toast(`Status → ${ns}`);
-    const full=await db.get("leveranciers_marketing_planner",{select:"*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)",eq:{id:pl.id}});setDetail(full[0]);loadPm(pl.id);load()
-  }catch(e){toast(e.message,"error")}}
-
-  async function addMiddel(mid){try{if(pm.find(x=>x.marketingmiddel_id===mid)){toast("Al gekoppeld","error");return}const mdl=await db.get("marketingmiddel",{eq:{id:mid}});const mm=mdl[0]||{};await db.post("planner_marketingmiddel",{planner_id:detail.id,marketingmiddel_id:mid,status:"Gepland",startdatum:mm.startdatum||null,einddatum:mm.einddatum||null,deadline:mm.deadline||null});const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:mid}});const now=new Date().toISOString().slice(0,10);const cur=cs.find(c=>c.periode_start<=now&&c.periode_eind>=now)||cs[0];if(cur)await db.patch("marketingmiddel_capaciteit",cur.id,{gereserveerd:cur.gereserveerd+1});toast("Toegevoegd");setSelModal(false);loadPm(detail.id)}catch(e){toast(e.message,"error")}}
-
-  async function rmMiddel(row){if(!confirm(`"${row.marketingmiddel?.pakketnaam}" verwijderen?`))return;try{if(row.status==="Gepland"||row.status==="In uitvoering"){const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:row.marketingmiddel_id}});for(const c of cs)if(c.gereserveerd>0)await db.patch("marketingmiddel_capaciteit",c.id,{gereserveerd:c.gereserveerd-1})}await db.del("planner_marketingmiddel",row.id);toast("Verwijderd");loadPm(detail.id)}catch(e){toast(e.message,"error")}}
-
-  async function updMiddel(row,data){try{if((data.status==="Geannuleerd"||data.status==="Afgerond")&&(row.status==="Gepland"||row.status==="In uitvoering")){if(data.status==="Geannuleerd"&&!confirm("Annuleren?"))return;const cs=await db.get("marketingmiddel_capaciteit",{eq:{marketingmiddel_id:row.marketingmiddel_id}});for(const c of cs)if(c.gereserveerd>0)await db.patch("marketingmiddel_capaciteit",c.id,{gereserveerd:c.gereserveerd-1})}await db.patch("planner_marketingmiddel",row.id,data);toast("Bijgewerkt");loadPm(detail.id)}catch(e){toast(e.message,"error")}}
-
-  function exportCSV(){const h=["Titel","Leverancier","Nr","Type","Status"];const rows=filtered.map(p=>[p.titel,p.leverancier?.bedrijfsnaam,p.leverancier?.leveranciernummer,p.type,p.status]);const csv=[h,...rows].map(r=>r.map(c=>`"${c||""}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="planners_export.csv";a.click();toast("Gedownload")}
-
-  if(detail){const locked=detail.status==="Afgerond"||detail.status==="Geannuleerd";const tot=pm.reduce((s,r)=>s+Number(r.marketingmiddel?.tarief||0),0);
-    return <div>
-      <button onClick={()=>{setDetail(null);load()}} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--tu)",marginBottom:20,padding:0}}><span style={{fontSize:18}}>←</span>Terug</button>
-      <Card style={{padding:28,marginBottom:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16}}>
-          <div><Badge status={detail.status}/><h2 style={{fontSize:24,fontWeight:700,marginTop:8}}>{detail.titel}</h2><div style={{display:"flex",gap:20,marginTop:10,fontSize:13,color:"var(--t2)"}}><span><strong style={{color:"var(--t)"}}>{detail.leverancier?.bedrijfsnaam}</strong> #{detail.leverancier?.leveranciernummer}</span><span>{detail.type}</span></div></div>
-          {!isMkt&&!locked&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {detail.status!=="Actief"&&<Btn small primary onClick={()=>chgStatus(detail,"Actief")}>Activeren</Btn>}
-            {detail.status!=="Concept"&&<Btn small onClick={()=>chgStatus(detail,"Concept")}>→ Concept</Btn>}
-            {detail.status!=="Afgerond"&&<Btn small onClick={()=>chgStatus(detail,"Afgerond")} style={{color:"var(--p)",borderColor:"var(--p)"}}>Afronden</Btn>}
-            <Btn small danger onClick={()=>chgStatus(detail,"Geannuleerd")}>Annuleren</Btn>
-          </div>}
-        </div>
-      </Card>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
-        <StatCard label="Middelen" value={pm.length} delay={50}/><StatCard label="Totaal tarief" value={`€${fmt(tot)}`} delay={100}/><StatCard label="Gem. voortgang" value={pm.length?Math.round(pm.reduce((s,r)=>s+r.voortgang,0)/pm.length)+"%":"—"} delay={150}/>
-      </div>
-      <Card style={{marginBottom:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 24px",borderBottom:"1px solid var(--b)"}}><h3 style={{fontSize:15,fontWeight:700}}>Middelen <span style={{color:"var(--t3)",fontWeight:400}}>({pm.length})</span></h3>{!isMkt&&!locked&&<Btn small primary onClick={()=>setSelModal(true)}>+ Toevoegen</Btn>}</div>
-        {pm.length===0?<Empty icon="📋" text="Voeg middelen toe"/>:<div>{pm.map((r,i)=><PmRow key={r.id} row={r} locked={locked||isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i===pm.length-1}/>)}</div>}
-      </Card>
-      {selModal&&<SelModal onSelect={addMiddel} onClose={()=>setSelModal(false)} existing={pm.map(r=>r.marketingmiddel_id)} toast={toast}/>}
+function Progress({ value }) {
+  const cl = value >= 100 ? "var(--p)" : "var(--tu)";
+  return <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ flex: 1, height: 5, borderRadius: 99, background: "var(--b)", overflow: "hidden" }}>
+      <div style={{ width: `${value}%`, height: "100%", borderRadius: 99, background: cl, transition: "width .4s" }} />
     </div>
+    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--t3)", fontFamily: "'JetBrains Mono',monospace", minWidth: 32, textAlign: "right" }}>{value}%</span>
+  </div>;
+}
+
+function Empty({ icon, text }) {
+  return <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--t3)" }}>
+    <div style={{ fontSize: 36, marginBottom: 12, opacity: .6 }}>{icon}</div>
+    <p style={{ fontSize: 14, lineHeight: 1.5 }}>{text}</p>
+  </div>;
+}
+
+function Toast({ msg, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3200); return () => clearTimeout(t); }, [onClose]);
+  return <div style={{ position: "fixed", top: 16, right: 16, zIndex: 2000, padding: "12px 20px", borderRadius: 12, background: type === "error" ? "var(--r)" : "var(--tu2)", color: "#fff", fontWeight: 600, fontSize: 13, boxShadow: "var(--shx)", maxWidth: 400, display: "flex", alignItems: "center", gap: 8 }}>
+    <span style={{ fontSize: 16 }}>{type === "error" ? "✕" : "✓"}</span>{msg}
+  </div>;
+}
+
+function Filters({ defs, vals, onChange }) {
+  return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+    {defs.map(f => <select key={f.key} value={vals[f.key] || ""} onChange={e => onChange(f.key, e.target.value)} style={{ width: "auto", minWidth: 150, padding: "7px 36px 7px 12px", fontSize: 14, borderColor: vals[f.key] ? "var(--tu)" : undefined, background: vals[f.key] ? "var(--tul)" : undefined }}>
+      <option value="">{f.placeholder}</option>{f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>)}
+    {Object.values(vals).some(v => v) && <Btn small onClick={() => defs.forEach(f => onChange(f.key, ""))}>Wis filters</Btn>}
+  </div>;
+}
+
+function Th({ children }) {
+  return <th style={{ textAlign: "left", padding: "11px 16px", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", borderBottom: "1.5px solid var(--b)", background: "var(--s2)" }}>{children}</th>;
+}
+function Td({ children, bold, mono, style: sx }) {
+  return <td style={{ padding: "12px 16px", fontSize: 14, fontWeight: bold ? 600 : 400, color: bold ? "var(--t)" : "var(--t2)", fontFamily: mono ? "'JetBrains Mono',monospace" : undefined, ...sx }}>{children}</td>;
+}
+function StatCard({ label, value, delay = 0 }) {
+  return <div className="anim" style={{ background: "var(--s)", borderRadius: "var(--rds)", border: "1px solid var(--b)", padding: "16px 20px", animationDelay: `${delay}ms` }}>
+    <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 6 }}>{label}</div>
+    <div style={{ fontSize: 28, fontWeight: 700, color: "var(--t)", fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>{value}</div>
+  </div>;
+}
+function Stat({ label, value }) {
+  return <div style={{ background: "var(--s)", borderRadius: "var(--rds)", border: "1px solid var(--b)", padding: "14px 18px" }}>
+    <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{label}</div>
+    <div style={{ fontSize: 22, fontWeight: 700, color: "var(--t)", fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>{value}</div>
+  </div>;
+}
+
+function getCap(caps, mid) {
+  const mc = caps.filter(c => c.marketingmiddel_id === mid);
+  const now = new Date().toISOString().slice(0, 10);
+  const cur = mc.find(c => c.periode_start <= now && c.periode_eind >= now) || mc[0];
+  return cur ? { used: cur.gereserveerd, total: cur.totale_capaciteit } : { used: 0, total: 0 };
+}
+const fmt = n => Number(n).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtD(d) { if (!d) return null; const p = d.split("-"); return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d; }
+function fmtPeriod(s, e) {
+  if (!s || !e) return null;
+  const ms = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+  const ps = s.split("-"), pe = e.split("-");
+  const mms = ms[parseInt(ps[1], 10) - 1], mme = ms[parseInt(pe[1], 10) - 1];
+  return ps[0] === pe[0] ? `${mms} – ${mme} ${ps[0]}` : `${mms} ${ps[0]} – ${mme} ${pe[0]}`;
+}
+function fmtTs(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short" }) + " " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+}
+function isOverdue(d) { return d && new Date(d) < new Date(); }
+
+// ============================================================
+// PmRow — redesigned with expand panel, tabs, notes, history
+// ============================================================
+function PmRow({ row, locked, onUpdate, onRemove, last, toast }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState("details");
+  const [notes, setNotes] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [noteText, setNoteText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [d, setD] = useState({ voortgang: row.voortgang, status: row.status });
+  const [notesLoaded, setNotesLoaded] = useState(false);
+
+  const overdue = isOverdue(row.deadline);
+  const period = fmtPeriod(row.startdatum, row.einddatum);
+  const deadline = fmtD(row.deadline);
+  const statusStyle = stm[row.status] || { fg: "var(--t3)" };
+
+  useEffect(() => {
+    if (!open || notesLoaded) return;
+    loadNotes();
+    loadHistory();
+    setNotesLoaded(true);
+  }, [open]);
+
+  async function loadNotes() {
+    try { setNotes(await db.get("planner_middel_notities", { eq: { planner_middel_id: row.id }, order: "created_at.desc" })); }
+    catch { setNotes([]); }
+  }
+  async function loadHistory() {
+    try { setHistory(await db.get("planner_middel_historie", { eq: { planner_middel_id: row.id }, order: "created_at.desc" })); }
+    catch { setHistory([]); }
+  }
+  async function addNote() {
+    if (!noteText.trim()) return;
+    setSaving(true);
+    try {
+      await db.post("planner_middel_notities", { planner_middel_id: row.id, tekst: noteText.trim(), auteur: "Inkoop" });
+      setNoteText("");
+      await loadNotes();
+      toast("Opmerking opgeslagen");
+    } catch { toast("Tabel 'planner_middel_notities' bestaat nog niet — zie SQL tip", "error"); }
+    setSaving(false);
+  }
+  async function saveEdit() {
+    await onUpdate(row, d);
+    setEditMode(false);
   }
 
-  const toggleExpand = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
-  const getPmForPlanner = (pid) => allPm.filter(x => x.planner_id === pid);
-  const getTotTarief = (pid) => getPmForPlanner(pid).reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
-  const getAvgVoortgang = (pid) => { const items = getPmForPlanner(pid); return items.length ? Math.round(items.reduce((s, r) => s + r.voortgang, 0) / items.length) : 0; };
-
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div><h2 style={{ fontSize: 16, fontWeight: 700 }}>Planners{isMkt && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2><p style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>{filtered.length} planners</p></div>
-        <div style={{ display: "flex", gap: 6 }}>{isMkt && <Btn onClick={exportCSV}>Export</Btn>}{!isMkt && <Btn primary onClick={() => setModal(true)}>+ Nieuwe planner</Btn>}</div>
-      </div>
-      <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "status", placeholder: "Status", opts: sts }, { key: "type", placeholder: "Type", opts: tps.length ? tps : ["Jaarafspraak", "Campagne", "Incidenteel"] }]} />
+    <div style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
 
-      {!loading && filtered.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
-          <Stat label="Totaal planners" value={filtered.length} />
-          <Stat label="Actief" value={filtered.filter(p => p.status === "Actief").length} />
-          <Stat label="Totaal middelen" value={filtered.reduce((s, p) => s + (counts[p.id] || 0), 0)} />
-          <Stat label="Totaal tarief" value={"€" + fmt(filtered.reduce((s, p) => s + getTotTarief(p.id), 0))} />
+      {/* ── COLLAPSED ROW ── */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "stretch", cursor: "pointer", transition: "background .1s", background: open ? "var(--tug)" : "transparent" }}
+        onMouseEnter={e => { if (!open) e.currentTarget.style.background = "var(--tug)"; }}
+        onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
+      >
+        {/* Status colour stripe */}
+        <div style={{ width: 4, background: statusStyle.fg, flexShrink: 0 }} />
+
+        <div style={{ flex: 1, padding: "14px 16px" }}>
+          {/* Row 1: name + status badge + tarief */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>
+              {row.marketingmiddel?.pakketnaam}
+            </span>
+            <Badge status={row.status} />
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>
+              €{fmt(row.marketingmiddel?.tarief || 0)}
+            </span>
+          </div>
+
+          {/* Row 2: date chips */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+            {period && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--t2)", background: "var(--s2)", borderRadius: 4, padding: "3px 8px", border: "1px solid var(--b)" }}>
+                📅 {period}
+              </span>
+            )}
+            {deadline && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
+                color: overdue ? "var(--r)" : "var(--a)",
+                background: overdue ? "var(--rb)" : "var(--ab)",
+                border: `1px solid ${overdue ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`,
+                borderRadius: 4, padding: "3px 8px"
+              }}>
+                {overdue ? "⚠️ Verlopen:" : "⏱ Deadline:"} {deadline}
+              </span>
+            )}
+            {notes.length > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--t3)", background: "var(--s2)", borderRadius: 4, padding: "3px 7px", border: "1px solid var(--b)" }}>
+                💬 {notes.length}
+              </span>
+            )}
+          </div>
+
+          {/* Row 3: progress bar */}
+          <div style={{ maxWidth: 260 }}>
+            <Progress value={row.voortgang} />
+          </div>
+        </div>
+
+        {/* Expand chevron */}
+        <div style={{ display: "flex", alignItems: "center", padding: "0 14px", color: "var(--t3)", flexShrink: 0 }}>
+          <span style={{ transform: open ? "rotate(90deg)" : "rotate(0)", transition: "transform .2s", display: "block", fontSize: 20 }}>›</span>
+        </div>
+      </div>
+
+      {/* ── EXPANDED PANEL ── */}
+      {open && (
+        <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
+
+          {/* Tab navigation */}
+          <div style={{ display: "flex", background: "var(--s)", borderBottom: "1px solid var(--b)", padding: "0 20px" }}>
+            {[["details", "Details"], ["notes", `Opmerkingen${notes.length ? ` (${notes.length})` : ""}`], ["history", `Historie${history.length ? ` (${history.length})` : ""}`]].map(([id, label]) => (
+              <button key={id} onClick={e => { e.stopPropagation(); setTab(id); }} style={{
+                padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer",
+                fontSize: 13, fontWeight: tab === id ? 700 : 400,
+                color: tab === id ? "var(--tu)" : "var(--t3)",
+                borderBottom: `2px solid ${tab === id ? "var(--tu)" : "transparent"}`,
+                transition: "all .15s", marginBottom: -1
+              }}>{label}</button>
+            ))}
+            <div style={{ flex: 1 }} />
+            {!locked && (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
+                <Btn small onClick={() => { setEditMode(e => !e); setTab("details"); }}>
+                  {editMode ? "Annuleren" : "✎ Bewerken"}
+                </Btn>
+                <Btn small danger onClick={() => onRemove(row)}>Verwijderen</Btn>
+              </div>
+            )}
+          </div>
+
+          {/* DETAILS TAB */}
+          {tab === "details" && (
+            <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
+              {editMode ? (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+                    <Field label="Voortgang (%)">
+                      <input type="number" min="0" max="100" value={d.voortgang}
+                        onChange={e => setD(p => ({ ...p, voortgang: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} />
+                    </Field>
+                    <Field label="Status">
+                      <select value={d.status} onChange={e => setD(p => ({ ...p, status: e.target.value }))}>
+                        {["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <Btn small onClick={() => setEditMode(false)}>Annuleren</Btn>
+                    <Btn small primary onClick={saveEdit}>Opslaan</Btn>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
+                  {[
+                    ["Status", <Badge status={row.status} />],
+                    ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>],
+                    ["Periode", period || "—"],
+                    ["Deadline", deadline
+                      ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span>
+                      : "—"],
+                    ["Tarief", `€ ${fmt(row.marketingmiddel?.tarief || 0)}`],
+                    ["Rubriek", row.marketingmiddel?.rubriek || "—"],
+                    ["Segment", row.marketingmiddel?.segment || "—"],
+                    ["Type campagne", row.marketingmiddel?.type_campagne || "—"],
+                  ].map(([lbl, val]) => (
+                    <div key={lbl}>
+                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div>
+                      <div style={{ fontSize: 13 }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NOTES TAB */}
+          {tab === "notes" && (
+            <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
+              {!locked && (
+                <div style={{ marginBottom: 16 }}>
+                  <textarea
+                    placeholder="Voeg een opmerking toe... (Ctrl+Enter om op te slaan)"
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) addNote(); }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                    <Btn small primary disabled={!noteText.trim() || saving} onClick={addNote}>
+                      {saving ? "Opslaan..." : "💬 Opmerking plaatsen"}
+                    </Btn>
+                  </div>
+                </div>
+              )}
+              {notes.length === 0
+                ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>Nog geen opmerkingen geplaatst</div>
+                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {notes.map(n => (
+                    <div key={n.id} style={{ background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "12px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--tu2)" }}>{n.auteur || "Gebruiker"}</span>
+                        <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(n.created_at)}</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: "var(--t)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{n.tekst}</p>
+                    </div>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
+
+          {/* HISTORY TAB */}
+          {tab === "history" && (
+            <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
+              {history.length === 0
+                ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>
+                    Nog geen wijzigingen vastgelegd
+                    <div style={{ marginTop: 6, fontSize: 11 }}>Voeg tabel <code style={{ background: "var(--s2)", padding: "1px 5px", borderRadius: 3 }}>planner_middel_historie</code> toe in Supabase</div>
+                  </div>
+                : <div style={{ position: "relative", paddingLeft: 2 }}>
+                  <div style={{ position: "absolute", left: 14, top: 4, bottom: 4, width: 2, background: "var(--b)" }} />
+                  {history.map(h => (
+                    <div key={h.id} style={{ display: "flex", gap: 12, marginBottom: 12, position: "relative" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 14, background: "var(--s)", border: "2px solid var(--b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
+                        <span style={{ fontSize: 11 }}>{h.actie === "status_gewijzigd" ? "🔄" : "✎"}</span>
+                      </div>
+                      <div style={{ flex: 1, background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "10px 14px", marginTop: -1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600 }}>{h.beschrijving}</span>
+                          <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(h.created_at)}</span>
+                        </div>
+                        {h.auteur && <span style={{ fontSize: 11, color: "var(--t3)" }}>{h.auteur}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
         </div>
       )}
-
-      {loading ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "50%", marginBottom: 6 }} /><div className="sk" style={{ width: "25%" }} /></div>)}</Card> :
-        filtered.length === 0 ? <Card><Empty text="Geen planners gevonden" /></Card> : (
-          <Card style={{ padding: 0 }}>
-            <table>
-              <thead>
-                <tr>
-                  <Th style={{ width: 30 }}></Th>
-                  <Th>Titel</Th>
-                  <Th>Leverancier</Th>
-                  <Th>Type</Th>
-                  <Th>Status</Th>
-                  <Th>Middelen</Th>
-                  <Th>Tarief</Th>
-                  <Th>Voortgang</Th>
-                  <Th></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(p => {
-                  const isOpen = expanded[p.id];
-                  const pItems = getPmForPlanner(p.id);
-                  const totT = getTotTarief(p.id);
-                  const avgV = getAvgVoortgang(p.id);
-                  return (
-                    <React.Fragment key={p.id}>
-                      <tr style={{ borderBottom: isOpen ? "none" : "1px solid var(--b)", transition: "background .1s", background: isOpen ? "var(--tug)" : "transparent" }}>
-                        <td style={{ padding: "10px 6px 10px 14px", width: 30 }}>
-                          <button onClick={() => toggleExpand(p.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--t3)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", transition: "transform .15s", padding: "2px 4px" }}>›</button>
-                        </td>
-                        <Td bold style={{ cursor: "pointer" }}><span onClick={() => setDetail(p)}>{p.titel}</span></Td>
-                        <Td>{p.leverancier?.bedrijfsnaam || "—"}</Td>
-                        <Td>{p.type}</Td>
-                        <Td><Badge status={p.status} /></Td>
-                        <Td mono>{counts[p.id] || 0}</Td>
-                        <Td mono>€{fmt(totT)}</Td>
-                        <Td style={{ width: 130 }}><Progress value={avgV} /></Td>
-                        <Td style={{ width: 40 }}><Btn small onClick={() => setDetail(p)}>→</Btn></Td>
-                      </tr>
-                      {isOpen && pItems.length > 0 && (
-                        <tr style={{ borderBottom: "1px solid var(--b)" }}>
-                          <td colSpan={9} style={{ padding: 0 }}>
-                            <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
-                              <table>
-                                <thead>
-                                  <tr>
-                                    <th style={{ textAlign: "left", padding: "6px 14px 6px 44px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Middel</th>
-                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Periode</th>
-                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Deadline</th>
-                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Tarief</th>
-                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Status</th>
-                                    <th style={{ textAlign: "left", padding: "6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>Voortgang</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {pItems.map((item, ii) => {
-                                    const dlP = item.deadline && new Date(item.deadline) < new Date();
-                                    return (
-                                      <tr key={item.id} style={{ borderBottom: ii < pItems.length - 1 ? "1px solid var(--b)" : "none" }}>
-                                        <td style={{ padding: "8px 14px 8px 44px", fontSize: 13, fontWeight: 500 }}>{item.marketingmiddel?.pakketnaam}</td>
-                                        <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? fmtPeriod(item.startdatum, item.einddatum) : "—"}</td>
-                                        <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(item.deadline)}</span> : "—"}</td>
-                                        <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>€{fmt(item.marketingmiddel?.tarief || 0)}</td>
-                                        <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
-                                        <td style={{ padding: "8px 14px", width: 120 }}><Progress value={item.voortgang} /></td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      {isOpen && pItems.length === 0 && (
-                        <tr style={{ borderBottom: "1px solid var(--b)" }}>
-                          <td colSpan={9} style={{ padding: "12px 44px", fontSize: 12, color: "var(--t3)", background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>Geen middelen gekoppeld</td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </Card>
-        )}
-      {modal && <PlannerForm levs={levs} onSave={create} onClose={() => setModal(false)} />}
     </div>
   );
 }
 
-function PlannerForm({levs,onSave,onClose}){
-  const[d,setD]=useState({titel:"",type:"Jaarafspraak",leverancier_id:""});const[q,setQ]=useState("");
-  const ok=d.titel&&d.type&&d.leverancier_id;const fl=levs.filter(l=>l.bedrijfsnaam.toLowerCase().includes(q.toLowerCase())||String(l.leveranciernummer).includes(q));const sel=levs.find(l=>l.id===d.leverancier_id);
+// ============================================================
+// MIDDELEN PAGE
+// ============================================================
+function MiddelenPage({ toast }) {
+  const [items, setItems] = useState([]);
+  const [caps, setCaps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [capModal, setCapModal] = useState(null);
+  const [f, setF] = useState({});
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [m, c] = await Promise.all([db.get("marketingmiddel", { order: "pakketnaam.asc" }), db.get("marketingmiddel_capaciteit", { order: "periode_start.asc" })]);
+      setItems(m); setCaps(c);
+      if (detail) setDetail(prev => m.find(x => x.id === prev?.id) || null);
+    } catch (e) { toast(e.message, "error"); }
+    setLoading(false);
+  }, [toast, detail?.id]);
+  useEffect(() => { load(); }, []);
+
+  const rubs = [...new Set(items.map(m => m.rubriek))];
+  const segs = [...new Set(items.map(m => m.segment))];
+  const tcs = [...new Set(items.map(m => m.type_campagne))];
+  const filtered = items.filter(m => {
+    if (f.rubriek && m.rubriek !== f.rubriek) return false;
+    if (f.segment && m.segment !== f.segment) return false;
+    if (f.type_campagne && m.type_campagne !== f.type_campagne) return false;
+    if (f.beschikbaar === "beschikbaar" && getCap(caps, m.id).total - getCap(caps, m.id).used <= 0) return false;
+    if (f.beschikbaar === "vol" && getCap(caps, m.id).total - getCap(caps, m.id).used > 0) return false;
+    return true;
+  });
+
+  async function save(data, eid) {
+    try {
+      if (eid) { await db.patch("marketingmiddel", eid, data); toast("Bijgewerkt"); }
+      else { await db.post("marketingmiddel", data); toast("Aangemaakt"); }
+      setModal(null); load();
+    } catch (e) { toast(e.message, "error"); }
+  }
+  async function remove(m) {
+    try {
+      const lnk = await db.get("planner_marketingmiddel", { eq: { marketingmiddel_id: m.id } });
+      if (lnk.filter(l => l.status === "Gepland" || l.status === "In uitvoering").length) { toast("Kan niet: actieve koppelingen", "error"); return; }
+      if (!confirm(`"${m.pakketnaam}" verwijderen?`)) return;
+      for (const c of caps.filter(c => c.marketingmiddel_id === m.id)) await db.del("marketingmiddel_capaciteit", c.id);
+      await db.del("marketingmiddel", m.id);
+      toast("Verwijderd"); setDetail(null); load();
+    } catch (e) { toast(e.message, "error"); }
+  }
+  async function saveCap(data, eid) {
+    try {
+      if (eid) { await db.patch("marketingmiddel_capaciteit", eid, data); toast("Bijgewerkt"); }
+      else { await db.post("marketingmiddel_capaciteit", { ...data, marketingmiddel_id: detail.id }); toast("Toegevoegd"); }
+      setCapModal(null); load();
+    } catch (e) { toast(e.message, "error"); }
+  }
+  async function delCap(c) {
+    if (!confirm("Verwijderen?")) return;
+    try { await db.del("marketingmiddel_capaciteit", c.id); toast("Verwijderd"); load(); }
+    catch (e) { toast(e.message, "error"); }
+  }
+
+  if (detail) {
+    const mCaps = caps.filter(c => c.marketingmiddel_id === detail.id);
+    return <div>
+      <button onClick={() => setDetail(null)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug</button>
+      <Card style={{ padding: 28, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{detail.rubriek} · {detail.segment}</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{detail.pakketnaam}</h2>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn small onClick={() => setModal(detail)}>Bewerken</Btn>
+            <Btn small danger onClick={() => remove(detail)}>Verwijderen</Btn>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 16, marginTop: 20 }}>
+          {[["Formaat", detail.formaat || "—"], ["Tarief", `€ ${fmt(detail.tarief)}`], ["Type Campagne", detail.type_campagne], ["Periode", fmtPeriod(detail.startdatum, detail.einddatum) || "—"], ["Startdatum", fmtD(detail.startdatum) || "—"], ["Einddatum", fmtD(detail.einddatum) || "—"], ["Deadline", fmtD(detail.deadline) || "—"]].map(([l, v]) => (
+            <div key={l}><div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 3 }}>{l}</div><div style={{ fontSize: 14, fontWeight: 500 }}>{v}</div></div>
+          ))}
+        </div>
+      </Card>
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Capaciteitsperiodes</h3>
+          <Btn small primary onClick={() => setCapModal("new")}>+ Periode</Btn>
+        </div>
+        {mCaps.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> :
+          <div style={{ padding: "4px 0" }}>
+            {mCaps.map((c, i) => {
+              const av = c.totale_capaciteit - c.gereserveerd;
+              const dlP = c.deadline && new Date(c.deadline) < new Date();
+              return <div key={c.id} style={{ display: "flex", alignItems: "center", padding: "14px 24px", borderBottom: i < mCaps.length - 1 ? "1px solid var(--b)" : "none", gap: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{c.naam || fmtPeriod(c.periode_start, c.periode_eind)}</div>
+                  <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--t3)" }}>
+                    <span>{fmtD(c.periode_start)} → {fmtD(c.periode_eind)}</span>
+                    {c.deadline && <span>Deadline: <strong style={{ color: dlP ? "var(--r)" : "var(--a)" }}>{fmtD(c.deadline)}</strong></span>}
+                  </div>
+                  <div style={{ maxWidth: 220, marginTop: 6 }}><CapBar used={c.gereserveerd} total={c.totale_capaciteit} /></div>
+                </div>
+                <div style={{ textAlign: "right", minWidth: 80 }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: av <= 0 ? "var(--r)" : "var(--t)" }}>{av}</div>
+                  <div style={{ fontSize: 11, color: "var(--t3)" }}>beschikbaar</div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Btn small onClick={() => setCapModal(c)}>✎</Btn>
+                  <Btn small danger onClick={() => delCap(c)}>✕</Btn>
+                </div>
+              </div>;
+            })}
+          </div>}
+      </Card>
+      {modal && <MiddelForm item={typeof modal === "object" ? modal : null} onSave={save} onClose={() => setModal(null)} />}
+      {capModal && <CapForm item={typeof capModal === "object" ? capModal : null} onSave={saveCap} onClose={() => setCapModal(null)} />}
+    </div>;
+  }
+
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div><h2 style={{ fontSize: 22, fontWeight: 700 }}>Marketingmiddelen</h2><p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} middelen</p></div>
+      <Btn primary onClick={() => setModal("new")}>+ Nieuw middel</Btn>
+    </div>
+    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "rubriek", placeholder: "Alle rubrieken", opts: rubs }, { key: "segment", placeholder: "Alle segmenten", opts: segs }, { key: "type_campagne", placeholder: "Alle types", opts: tcs }, { key: "beschikbaar", placeholder: "Beschikbaarheid", opts: ["beschikbaar", "vol"] }]} />
+    {loading ? <Card style={{ padding: 0 }}>{[...Array(4)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "60%", marginBottom: 8 }} /><div className="sk" style={{ width: "30%" }} /></div>)}</Card>
+      : filtered.length === 0 ? <Card><Empty icon="📦" text="Geen middelen gevonden" /></Card>
+      : <Card style={{ padding: 0 }}>
+        <table><thead><tr><Th>Pakketnaam</Th><Th>Formaat</Th><Th>Rubriek</Th><Th>Segment</Th><Th>Periode</Th><Th>Deadline</Th><Th>Tarief</Th></tr></thead>
+          <tbody>{filtered.map(m => {
+            const dlP = m.deadline && new Date(m.deadline) < new Date();
+            return <tr key={m.id} onClick={() => setDetail(m)} style={{ cursor: "pointer", borderBottom: "1px solid var(--b)", transition: "background .1s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--tug)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <Td bold>{m.pakketnaam}</Td><Td>{m.formaat || "—"}</Td><Td>{m.rubriek}</Td><Td>{m.segment}</Td>
+              <Td>{fmtPeriod(m.startdatum, m.einddatum) || "—"}</Td>
+              <Td>{m.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(m.deadline)}</span> : "—"}</Td>
+              <Td mono>€{fmt(m.tarief)}</Td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </Card>}
+    {modal && <MiddelForm item={typeof modal === "object" ? modal : null} onSave={save} onClose={() => setModal(null)} />}
+  </div>;
+}
+
+function MiddelForm({ item, onSave, onClose }) {
+  const [d, setD] = useState(item || { pakketnaam: "", rubriek: "", formaat: "", tarief: "", type_campagne: "", segment: "", info_link: "", startdatum: "", einddatum: "", deadline: "" });
+  const s = (k, v) => setD(p => ({ ...p, [k]: v }));
+  const ok = d.pakketnaam && d.rubriek && d.formaat && Number(d.tarief) > 0 && d.type_campagne && d.segment;
+  return <Modal title={item ? "Middel bewerken" : "Nieuw marketingmiddel"} onClose={onClose}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+      <Field label="Pakketnaam" required><input value={d.pakketnaam} onChange={e => s("pakketnaam", e.target.value)} /></Field>
+      <Field label="Rubriek" required><input value={d.rubriek} onChange={e => s("rubriek", e.target.value)} /></Field>
+      <Field label="Formaat" required><input value={d.formaat} onChange={e => s("formaat", e.target.value)} /></Field>
+      <Field label="Tarief (€)" required><input type="number" step="0.01" value={d.tarief} onChange={e => s("tarief", e.target.value)} /></Field>
+      <Field label="Type Campagne" required><input value={d.type_campagne} onChange={e => s("type_campagne", e.target.value)} /></Field>
+      <Field label="Segment" required><input value={d.segment} onChange={e => s("segment", e.target.value)} /></Field>
+      <Field label="Info Link"><input value={d.info_link || ""} onChange={e => s("info_link", e.target.value)} placeholder="https://" /></Field><div />
+      <Field label="Startdatum"><input type="date" value={d.startdatum || ""} onChange={e => s("startdatum", e.target.value || null)} /></Field>
+      <Field label="Einddatum"><input type="date" value={d.einddatum || ""} onChange={e => s("einddatum", e.target.value || null)} /></Field>
+      <Field label="Deadline"><input type="date" value={d.deadline || ""} onChange={e => s("deadline", e.target.value || null)} /></Field>
+    </div>
+    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
+      <Btn onClick={onClose}>Annuleren</Btn>
+      <Btn primary disabled={!ok} onClick={() => onSave({ pakketnaam: d.pakketnaam, rubriek: d.rubriek, formaat: d.formaat, tarief: parseFloat(d.tarief), type_campagne: d.type_campagne, segment: d.segment, info_link: d.info_link || null, startdatum: d.startdatum || null, einddatum: d.einddatum || null, deadline: d.deadline || null }, item?.id)}>Opslaan</Btn>
+    </div>
+  </Modal>;
+}
+
+function CapForm({ item, onSave, onClose }) {
+  const [d, setD] = useState(item || { periode_start: "", periode_eind: "", totale_capaciteit: "" });
+  const ok = d.periode_start && d.periode_eind && d.periode_eind > d.periode_start && Number(d.totale_capaciteit) > 0;
+  return <Modal title={item ? "Capaciteit bewerken" : "Nieuwe periode"} onClose={onClose}>
+    <Field label="Periode start" required><input type="date" value={d.periode_start} onChange={e => setD(p => ({ ...p, periode_start: e.target.value }))} /></Field>
+    <Field label="Periode eind" required><input type="date" value={d.periode_eind} onChange={e => setD(p => ({ ...p, periode_eind: e.target.value }))} /></Field>
+    <Field label="Totale capaciteit" required><input type="number" min="1" value={d.totale_capaciteit} onChange={e => setD(p => ({ ...p, totale_capaciteit: e.target.value }))} /></Field>
+    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
+      <Btn onClick={onClose}>Annuleren</Btn>
+      <Btn primary disabled={!ok} onClick={() => onSave({ periode_start: d.periode_start, periode_eind: d.periode_eind, totale_capaciteit: parseInt(d.totale_capaciteit), naam: `${d.periode_start} – ${d.periode_eind}` }, item?.id)}>Opslaan</Btn>
+    </div>
+  </Modal>;
+}
+
+// ============================================================
+// LEVERANCIERS PAGE
+// ============================================================
+function LeveranciersPage({ toast }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      try { setItems(await db.get("leverancier", { order: "bedrijfsnaam.asc" })); }
+      catch (e) { toast(e.message, "error"); }
+      setLoading(false);
+    })();
+  }, [toast]);
+  return <div>
+    <div style={{ marginBottom: 20 }}><h2 style={{ fontSize: 22, fontWeight: 700 }}>Leveranciers</h2><p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>SAP sync — read-only</p></div>
+    {loading ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "40%" }} /></div>)}</Card>
+      : <Card style={{ padding: 0 }}>
+        <table><thead><tr><Th>Bedrijfsnaam</Th><Th>Nummer</Th><Th>E-mail</Th></tr></thead>
+          <tbody>{items.map(l => <tr key={l.id} style={{ borderBottom: "1px solid var(--b)" }}><Td bold>{l.bedrijfsnaam}</Td><Td mono>{l.leveranciernummer || "—"}</Td><Td>{l.email}</Td></tr>)}</tbody>
+        </table>
+      </Card>}
+  </div>;
+}
+
+// ============================================================
+// PLANNERS PAGE
+// ============================================================
+function PlannersPage({ toast, role }) {
+  const [planners, setPlanners] = useState([]);
+  const [levs, setLevs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [pm, setPm] = useState([]);
+  const [selModal, setSelModal] = useState(false);
+  const [f, setF] = useState({});
+  const [counts, setCounts] = useState({});
+  const [allPm, setAllPm] = useState([]);
+  const [expanded, setExpanded] = useState({});
+  const isMkt = role === "marketing";
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [p, l, ap] = await Promise.all([
+        db.get("leveranciers_marketing_planner", { select: "*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)", order: "created_at.desc" }),
+        db.get("leverancier", { order: "bedrijfsnaam.asc" }),
+        db.get("planner_marketingmiddel", { select: "*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne,formaat)" })
+      ]);
+      setPlanners(p); setLevs(l); setAllPm(ap);
+      const c = {}; ap.forEach(x => c[x.planner_id] = (c[x.planner_id] || 0) + 1); setCounts(c);
+    } catch (e) { toast(e.message, "error"); }
+    setLoading(false);
+  }, [toast]);
+  useEffect(() => { load(); }, [load]);
+
+  const loadPm = useCallback(async pid => {
+    try { setPm(await db.get("planner_marketingmiddel", { select: "*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,tarief,segment,type_campagne)", eq: { planner_id: pid }, order: "created_at.asc" })); }
+    catch (e) { toast(e.message, "error"); }
+  }, [toast]);
+  useEffect(() => { if (detail) loadPm(detail.id); }, [detail, loadPm]);
+
+  const sts = ["Concept", "Actief", "Afgerond", "Geannuleerd"];
+  const tps = [...new Set(planners.map(p => p.type).filter(Boolean))];
+  const filtered = planners.filter(p => {
+    if (f.status && p.status !== f.status) return false;
+    if (f.type && p.type !== f.type) return false;
+    return true;
+  });
+
+  async function create(data) {
+    try {
+      const res = await db.post("leveranciers_marketing_planner", { ...data, status: "Concept" });
+      toast("Planner aangemaakt"); setModal(false); load();
+      const full = await db.get("leveranciers_marketing_planner", { select: "*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)", eq: { id: res[0].id } });
+      setDetail(full[0]);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function chgStatus(pl, ns) {
+    try {
+      if (ns === "Actief") {
+        const lk = await db.get("planner_marketingmiddel", { eq: { planner_id: pl.id } });
+        if (!lk.length) { toast("Min. 1 middel vereist", "error"); return; }
+      }
+      if (ns === "Geannuleerd") {
+        if (!confirm("Annuleren? Alle middelen worden geannuleerd.")) return;
+        const lk = await db.get("planner_marketingmiddel", { eq: { planner_id: pl.id } });
+        for (const m of lk.filter(l => l.status === "Gepland" || l.status === "In uitvoering")) {
+          await db.patch("planner_marketingmiddel", m.id, { status: "Geannuleerd" });
+          const cs = await db.get("marketingmiddel_capaciteit", { eq: { marketingmiddel_id: m.marketingmiddel_id } });
+          for (const c of cs) if (c.gereserveerd > 0) await db.patch("marketingmiddel_capaciteit", c.id, { gereserveerd: c.gereserveerd - 1 });
+        }
+      }
+      await db.patch("leveranciers_marketing_planner", pl.id, { status: ns });
+      toast(`Status → ${ns}`);
+      const full = await db.get("leveranciers_marketing_planner", { select: "*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)", eq: { id: pl.id } });
+      setDetail(full[0]); loadPm(pl.id); load();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function addMiddel(mid) {
+    try {
+      if (pm.find(x => x.marketingmiddel_id === mid)) { toast("Al gekoppeld", "error"); return; }
+      const mdl = await db.get("marketingmiddel", { eq: { id: mid } });
+      const mm = mdl[0] || {};
+      await db.post("planner_marketingmiddel", { planner_id: detail.id, marketingmiddel_id: mid, status: "Gepland", startdatum: mm.startdatum || null, einddatum: mm.einddatum || null, deadline: mm.deadline || null });
+      const cs = await db.get("marketingmiddel_capaciteit", { eq: { marketingmiddel_id: mid } });
+      const now = new Date().toISOString().slice(0, 10);
+      const cur = cs.find(c => c.periode_start <= now && c.periode_eind >= now) || cs[0];
+      if (cur) await db.patch("marketingmiddel_capaciteit", cur.id, { gereserveerd: cur.gereserveerd + 1 });
+      toast("Toegevoegd"); setSelModal(false); loadPm(detail.id);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function rmMiddel(row) {
+    if (!confirm(`"${row.marketingmiddel?.pakketnaam}" verwijderen?`)) return;
+    try {
+      if (row.status === "Gepland" || row.status === "In uitvoering") {
+        const cs = await db.get("marketingmiddel_capaciteit", { eq: { marketingmiddel_id: row.marketingmiddel_id } });
+        for (const c of cs) if (c.gereserveerd > 0) await db.patch("marketingmiddel_capaciteit", c.id, { gereserveerd: c.gereserveerd - 1 });
+      }
+      await db.del("planner_marketingmiddel", row.id);
+      toast("Verwijderd"); loadPm(detail.id);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function updMiddel(row, data) {
+    try {
+      if ((data.status === "Geannuleerd" || data.status === "Afgerond") && (row.status === "Gepland" || row.status === "In uitvoering")) {
+        if (data.status === "Geannuleerd" && !confirm("Annuleren?")) return;
+        const cs = await db.get("marketingmiddel_capaciteit", { eq: { marketingmiddel_id: row.marketingmiddel_id } });
+        for (const c of cs) if (c.gereserveerd > 0) await db.patch("marketingmiddel_capaciteit", c.id, { gereserveerd: c.gereserveerd - 1 });
+      }
+      await db.patch("planner_marketingmiddel", row.id, data);
+      toast("Bijgewerkt"); loadPm(detail.id);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  function exportCSV() {
+    const h = ["Titel", "Leverancier", "Nr", "Type", "Status"];
+    const rows = filtered.map(p => [p.titel, p.leverancier?.bedrijfsnaam, p.leverancier?.leveranciernummer, p.type, p.status]);
+    const csv = [h, ...rows].map(r => r.map(c => `"${c || ""}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" }));
+    a.download = "planners_export.csv"; a.click();
+    toast("Gedownload");
+  }
+
+  if (detail) {
+    const locked = detail.status === "Afgerond" || detail.status === "Geannuleerd";
+    const tot = pm.reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
+    return <div>
+      <button onClick={() => { setDetail(null); load(); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug</button>
+      <Card style={{ padding: 28, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <Badge status={detail.status} />
+            <h2 style={{ fontSize: 24, fontWeight: 700, marginTop: 8 }}>{detail.titel}</h2>
+            <div style={{ display: "flex", gap: 20, marginTop: 10, fontSize: 13, color: "var(--t2)" }}>
+              <span><strong style={{ color: "var(--t)" }}>{detail.leverancier?.bedrijfsnaam}</strong> #{detail.leverancier?.leveranciernummer}</span>
+              <span>{detail.type}</span>
+            </div>
+          </div>
+          {!isMkt && !locked && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {detail.status !== "Actief" && <Btn small primary onClick={() => chgStatus(detail, "Actief")}>Activeren</Btn>}
+              {detail.status !== "Concept" && <Btn small onClick={() => chgStatus(detail, "Concept")}>→ Concept</Btn>}
+              {detail.status !== "Afgerond" && <Btn small onClick={() => chgStatus(detail, "Afgerond")} style={{ color: "var(--p)", borderColor: "var(--p)" }}>Afronden</Btn>}
+              <Btn small danger onClick={() => chgStatus(detail, "Geannuleerd")}>Annuleren</Btn>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+        <StatCard label="Middelen" value={pm.length} delay={50} />
+        <StatCard label="Totaal tarief" value={`€${fmt(tot)}`} delay={100} />
+        <StatCard label="Gem. voortgang" value={pm.length ? Math.round(pm.reduce((s, r) => s + r.voortgang, 0) / pm.length) + "%" : "—"} delay={150} />
+      </div>
+
+      {/* SQL tip */}
+      <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <span>💡</span>
+        <span>Om opmerkingen & historie op te slaan, voeg de tabellen toe in Supabase.
+          <button onClick={() => {
+            const sql = `-- Voer uit in Supabase SQL Editor:\n\nCREATE TABLE planner_middel_notities (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  tekst text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE planner_middel_historie (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  actie text,\n  beschrijving text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\n-- RLS policies:\nALTER TABLE planner_middel_notities ENABLE ROW LEVEL SECURITY;\nALTER TABLE planner_middel_historie ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow all" ON planner_middel_notities FOR ALL USING (true);\nCREATE POLICY "allow all" ON planner_middel_historie FOR ALL USING (true);`;
+            prompt("Kopieer deze SQL en voer uit in Supabase:", sql);
+          }} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontWeight: 700, textDecoration: "underline", marginLeft: 6, padding: 0, fontSize: 12 }}>Bekijk SQL →</button>
+        </span>
+      </div>
+
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Middelen <span style={{ color: "var(--t3)", fontWeight: 400 }}>({pm.length})</span></h3>
+          {!isMkt && !locked && <Btn small primary onClick={() => setSelModal(true)}>+ Toevoegen</Btn>}
+        </div>
+        {pm.length === 0
+          ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
+          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} />)}</div>
+        }
+      </Card>
+      {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.marketingmiddel_id)} toast={toast} />}
+    </div>;
+  }
+
+  const toggleExpand = id => setExpanded(p => ({ ...p, [id]: !p[id] }));
+  const getPmFor = pid => allPm.filter(x => x.planner_id === pid);
+  const getTotTarief = pid => getPmFor(pid).reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
+  const getAvgV = pid => { const items = getPmFor(pid); return items.length ? Math.round(items.reduce((s, r) => s + r.voortgang, 0) / items.length) : 0; };
+
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div><h2 style={{ fontSize: 22, fontWeight: 700 }}>Planners{isMkt && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2>
+        <p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} planners</p>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {isMkt && <Btn onClick={exportCSV}>Export</Btn>}
+        {!isMkt && <Btn primary onClick={() => setModal(true)}>+ Nieuwe planner</Btn>}
+      </div>
+    </div>
+    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "status", placeholder: "Status", opts: sts }, { key: "type", placeholder: "Type", opts: tps.length ? tps : ["Jaarafspraak", "Campagne", "Incidenteel"] }]} />
+
+    {!loading && filtered.length > 0 && (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+        <Stat label="Totaal planners" value={filtered.length} />
+        <Stat label="Actief" value={filtered.filter(p => p.status === "Actief").length} />
+        <Stat label="Totaal middelen" value={filtered.reduce((s, p) => s + (counts[p.id] || 0), 0)} />
+        <Stat label="Totaal tarief" value={"€" + fmt(filtered.reduce((s, p) => s + getTotTarief(p.id), 0))} />
+      </div>
+    )}
+
+    {loading
+      ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "50%", marginBottom: 6 }} /><div className="sk" style={{ width: "25%" }} /></div>)}</Card>
+      : filtered.length === 0 ? <Card><Empty text="Geen planners gevonden" /></Card>
+      : <Card style={{ padding: 0 }}>
+        <table>
+          <thead><tr><Th></Th><Th>Titel</Th><Th>Leverancier</Th><Th>Type</Th><Th>Status</Th><Th>Middelen</Th><Th>Tarief</Th><Th>Voortgang</Th><Th></Th></tr></thead>
+          <tbody>
+            {filtered.map(p => {
+              const isOpen = expanded[p.id];
+              const pItems = getPmFor(p.id);
+              return <React.Fragment key={p.id}>
+                <tr style={{ borderBottom: isOpen ? "none" : "1px solid var(--b)", background: isOpen ? "var(--tug)" : "transparent", transition: "background .1s" }}>
+                  <td style={{ padding: "10px 6px 10px 14px", width: 30 }}>
+                    <button onClick={() => toggleExpand(p.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--t3)", transform: isOpen ? "rotate(90deg)" : "rotate(0)", transition: "transform .15s", padding: "2px 4px" }}>›</button>
+                  </td>
+                  <Td bold style={{ cursor: "pointer" }}><span onClick={() => setDetail(p)}>{p.titel}</span></Td>
+                  <Td>{p.leverancier?.bedrijfsnaam || "—"}</Td>
+                  <Td>{p.type}</Td>
+                  <Td><Badge status={p.status} /></Td>
+                  <Td mono>{counts[p.id] || 0}</Td>
+                  <Td mono>€{fmt(getTotTarief(p.id))}</Td>
+                  <Td style={{ width: 130 }}><Progress value={getAvgV(p.id)} /></Td>
+                  <Td style={{ width: 40 }}><Btn small onClick={() => setDetail(p)}>→</Btn></Td>
+                </tr>
+                {isOpen && (
+                  <tr style={{ borderBottom: "1px solid var(--b)" }}>
+                    <td colSpan={9} style={{ padding: 0 }}>
+                      <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
+                        {pItems.length === 0
+                          ? <div style={{ padding: "12px 44px", fontSize: 12, color: "var(--t3)" }}>Geen middelen gekoppeld</div>
+                          : <table>
+                            <thead><tr>{["Middel", "Periode", "Deadline", "Tarief", "Status", "Voortgang"].map(h => <th key={h} style={{ textAlign: "left", padding: "6px 14px 6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>{h}</th>)}</tr></thead>
+                            <tbody>
+                              {pItems.map((item, ii) => {
+                                const dlP = item.deadline && new Date(item.deadline) < new Date();
+                                return <tr key={item.id} style={{ borderBottom: ii < pItems.length - 1 ? "1px solid var(--b)" : "none" }}>
+                                  <td style={{ padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>{item.marketingmiddel?.pakketnaam}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? fmtPeriod(item.startdatum, item.einddatum) : "—"}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(item.deadline)}</span> : "—"}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.marketingmiddel?.tarief || 0)}</td>
+                                  <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
+                                  <td style={{ padding: "8px 14px", width: 120 }}><Progress value={item.voortgang} /></td>
+                                </tr>;
+                              })}
+                            </tbody>
+                          </table>}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>;
+            })}
+          </tbody>
+        </table>
+      </Card>}
+    {modal && <PlannerForm levs={levs} onSave={create} onClose={() => setModal(false)} />}
+  </div>;
+}
+
+function PlannerForm({ levs, onSave, onClose }) {
+  const [d, setD] = useState({ titel: "", type: "Jaarafspraak", leverancier_id: "" });
+  const [q, setQ] = useState("");
+  const ok = d.titel && d.type && d.leverancier_id;
+  const fl = levs.filter(l => l.bedrijfsnaam.toLowerCase().includes(q.toLowerCase()) || String(l.leveranciernummer).includes(q));
+  const sel = levs.find(l => l.id === d.leverancier_id);
   return <Modal title="Nieuwe planner" onClose={onClose}>
-    <Field label="Titel" required><input value={d.titel} onChange={e=>setD(p=>({...p,titel:e.target.value}))} placeholder="Bijv. Jaarplan Schneider 2026"/></Field>
-    <Field label="Type" required><select value={d.type} onChange={e=>setD(p=>({...p,type:e.target.value}))}><option>Jaarafspraak</option><option>Campagne</option><option>Incidenteel</option></select></Field>
+    <Field label="Titel" required><input value={d.titel} onChange={e => setD(p => ({ ...p, titel: e.target.value }))} placeholder="Bijv. Jaarplan Schneider 2026" /></Field>
+    <Field label="Type" required><select value={d.type} onChange={e => setD(p => ({ ...p, type: e.target.value }))}><option>Jaarafspraak</option><option>Campagne</option><option>Incidenteel</option></select></Field>
     <Field label="Leverancier" required>
-      <input placeholder="Zoek op naam of nummer..." value={q} onChange={e=>{setQ(e.target.value);if(!e.target.value)setD(p=>({...p,leverancier_id:""}))}}/>
-      {sel&&!q&&<div style={{marginTop:6,fontSize:13,color:"var(--tu)",fontWeight:600}}>✓ {sel.bedrijfsnaam}</div>}
-      {q&&<div style={{border:"1.5px solid var(--b)",borderRadius:"var(--rdx)",maxHeight:180,overflow:"auto",marginTop:6}}>
-        {fl.length===0?<div style={{padding:"10px 14px",fontSize:13,color:"var(--t3)"}}>Geen resultaten</div>:
-        fl.map(l=><div key={l.id} onClick={()=>{setD(p=>({...p,leverancier_id:l.id}));setQ("")}} style={{padding:"10px 14px",cursor:"pointer",fontSize:13,borderBottom:"1px solid var(--b)",transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <strong>{l.bedrijfsnaam}</strong> <span style={{color:"var(--t3)",fontFamily:"'JetBrains Mono',monospace",fontSize:12}}>#{l.leveranciernummer}</span>
-        </div>)}
+      <input placeholder="Zoek op naam of nummer..." value={q} onChange={e => { setQ(e.target.value); if (!e.target.value) setD(p => ({ ...p, leverancier_id: "" })); }} />
+      {sel && !q && <div style={{ marginTop: 6, fontSize: 13, color: "var(--tu)", fontWeight: 600 }}>✓ {sel.bedrijfsnaam}</div>}
+      {q && <div style={{ border: "1.5px solid var(--b)", borderRadius: "var(--rdx)", maxHeight: 180, overflow: "auto", marginTop: 6 }}>
+        {fl.length === 0 ? <div style={{ padding: "10px 14px", fontSize: 13, color: "var(--t3)" }}>Geen resultaten</div>
+          : fl.map(l => <div key={l.id} onClick={() => { setD(p => ({ ...p, leverancier_id: l.id })); setQ(""); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid var(--b)", transition: "background .1s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--tug)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <strong>{l.bedrijfsnaam}</strong> <span style={{ color: "var(--t3)", fontFamily: "'JetBrains Mono',monospace", fontSize: 12 }}>#{l.leveranciernummer}</span>
+          </div>)}
       </div>}
     </Field>
-    <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:20,paddingTop:16,borderTop:"1px solid var(--b)"}}><Btn onClick={onClose}>Annuleren</Btn><Btn primary disabled={!ok} onClick={()=>onSave(d)}>Aanmaken</Btn></div>
-  </Modal>
+    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
+      <Btn onClick={onClose}>Annuleren</Btn><Btn primary disabled={!ok} onClick={() => onSave(d)}>Aanmaken</Btn>
+    </div>
+  </Modal>;
 }
 
-function PmRow({row,locked,onUpdate,onRemove,last}){
-  const[edit,setEdit]=useState(false);const[d,setD]=useState({voortgang:row.voortgang,status:row.status});
-  const dlP=row.deadline&&new Date(row.deadline)<new Date();
-  if(edit)return <div style={{padding:"16px 20px",borderBottom:last?"none":"1px solid var(--b)",background:"var(--bg2)"}}>
-    <div style={{fontWeight:600,marginBottom:4}}>{row.marketingmiddel?.pakketnaam}</div>
-    <div style={{display:"flex",gap:12,fontSize:12,color:"var(--t3)",marginBottom:12,padding:"6px 10px",background:"var(--s)",borderRadius:"var(--rdx)",border:"1px solid var(--b)"}}>
-      {row.startdatum&&<span>Start: <strong style={{color:"var(--t2)"}}>{fmtD(row.startdatum)}</strong></span>}
-      {row.einddatum&&<span>Eind: <strong style={{color:"var(--t2)"}}>{fmtD(row.einddatum)}</strong></span>}
-      {row.deadline&&<span>Deadline: <strong style={{color:dlP?"var(--r)":"var(--a)"}}>{fmtD(row.deadline)}</strong></span>}
-    </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
-      <Field label="Voortgang (%)"><input type="number" min="0" max="100" value={d.voortgang} onChange={e=>setD(p=>({...p,voortgang:Math.min(100,Math.max(0,parseInt(e.target.value)||0))}))}/></Field>
-      <Field label="Status"><select value={d.status} onChange={e=>setD(p=>({...p,status:e.target.value}))}>{["Gepland","In uitvoering","Afgerond","Geannuleerd"].map(s=><option key={s}>{s}</option>)}</select></Field>
-    </div>
-    <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}><Btn small onClick={()=>setEdit(false)}>Annuleren</Btn><Btn small primary onClick={()=>{onUpdate(row,d);setEdit(false)}}>Opslaan</Btn></div>
-  </div>;
-
-  return <div style={{display:"flex",alignItems:"center",padding:"12px 20px",borderBottom:last?"none":"1px solid var(--b)",gap:14,transition:"background .1s"}} onMouseEnter={e=>e.currentTarget.style.background="var(--tug)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-    <div style={{flex:1}}>
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}><span style={{fontWeight:600,fontSize:13}}>{row.marketingmiddel?.pakketnaam}</span><Badge status={row.status}/></div>
-      <div style={{display:"flex",gap:12,fontSize:12,color:"var(--t3)"}}>
-        {row.startdatum&&row.einddatum&&<span>{fmtPeriod(row.startdatum,row.einddatum)}</span>}
-        {row.deadline&&<span>Deadline: <strong style={{color:dlP?"var(--r)":"var(--a)"}}>{fmtD(row.deadline)}</strong></span>}
-        <span style={{fontFamily:"'JetBrains Mono',monospace"}}>€{fmt(row.marketingmiddel?.tarief||0)}</span>
-      </div>
-      <div style={{marginTop:6,maxWidth:200}}><Progress value={row.voortgang}/></div>
-    </div>
-    {!locked&&<div style={{display:"flex",gap:4}}><Btn small onClick={()=>setEdit(true)}>✎</Btn><Btn small danger onClick={()=>onRemove(row)}>✕</Btn></div>}
-  </div>
-}
-
-function SelModal({onSelect,onClose,existing,toast}){
-  const[items,setItems]=useState([]);const[caps,setCaps]=useState([]);const[loading,setLoading]=useState(true);const[f,setF]=useState({});
-  useEffect(()=>{(async()=>{try{const[m,c]=await Promise.all([db.get("marketingmiddel",{order:"pakketnaam.asc"}),db.get("marketingmiddel_capaciteit")]);setItems(m);setCaps(c)}catch(e){toast(e.message,"error")}setLoading(false)})()},[toast]);
-  const rubs=[...new Set(items.map(m=>m.rubriek))];const segs=[...new Set(items.map(m=>m.segment))];
-  const fl=items.filter(m=>{if(f.rubriek&&m.rubriek!==f.rubriek)return false;if(f.segment&&m.segment!==f.segment)return false;return true});
+function SelModal({ onSelect, onClose, existing, toast }) {
+  const [items, setItems] = useState([]);
+  const [caps, setCaps] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [f, setF] = useState({});
+  useEffect(() => {
+    (async () => {
+      try { const [m, c] = await Promise.all([db.get("marketingmiddel", { order: "pakketnaam.asc" }), db.get("marketingmiddel_capaciteit")]); setItems(m); setCaps(c); }
+      catch (e) { toast(e.message, "error"); }
+      setLoading(false);
+    })();
+  }, [toast]);
+  const rubs = [...new Set(items.map(m => m.rubriek))];
+  const segs = [...new Set(items.map(m => m.segment))];
+  const fl = items.filter(m => { if (f.rubriek && m.rubriek !== f.rubriek) return false; if (f.segment && m.segment !== f.segment) return false; return true; });
   return <Modal title="Middel selecteren" onClose={onClose} wide>
-    <Filters vals={f} onChange={(k,v)=>setF(p=>({...p,[k]:v}))} defs={[{key:"rubriek",placeholder:"Alle rubrieken",opts:rubs},{key:"segment",placeholder:"Alle segmenten",opts:segs}]}/>
-    {loading?<div style={{padding:40,textAlign:"center",color:"var(--t3)"}}>Laden...</div>:
-    <div style={{maxHeight:420,overflow:"auto",borderRadius:"var(--rdx)",border:"1px solid var(--b)"}}>
-      {fl.map((m,i)=>{const c=getCap(caps,m.id);const av=c.total-c.used;const lk=existing.includes(m.id);const vol=av<=0;
-        return <div key={m.id} style={{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<fl.length-1?"1px solid var(--b)":"none",opacity:lk?0.4:1,gap:14}}>
-          <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{m.pakketnaam}{lk&&<span style={{fontSize:11,color:"var(--t3)"}}> (gekoppeld)</span>}</div><div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{m.rubriek} · {m.segment} · €{fmt(m.tarief)}</div></div>
-          <div style={{width:120}}><CapBar used={c.used} total={c.total}/></div>
-          <Btn small primary={!lk&&!vol} disabled={lk} style={vol&&!lk?{background:"var(--a)",color:"#fff"}:{}} onClick={()=>{if(vol&&!confirm("Geen capaciteit! Toch toevoegen?"))return;onSelect(m.id)}}>{lk?"Gekoppeld":vol?"Vol → toevoegen":"Toevoegen"}</Btn>
-        </div>})}
-    </div>}
-  </Modal>
+    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "rubriek", placeholder: "Alle rubrieken", opts: rubs }, { key: "segment", placeholder: "Alle segmenten", opts: segs }]} />
+    {loading ? <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>Laden...</div>
+      : <div style={{ maxHeight: 420, overflow: "auto", borderRadius: "var(--rdx)", border: "1px solid var(--b)" }}>
+        {fl.map((m, i) => {
+          const c = getCap(caps, m.id);
+          const av = c.total - c.used;
+          const lk = existing.includes(m.id);
+          const vol = av <= 0;
+          return <div key={m.id} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < fl.length - 1 ? "1px solid var(--b)" : "none", opacity: lk ? 0.4 : 1, gap: 14 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.pakketnaam}{lk && <span style={{ fontSize: 11, color: "var(--t3)" }}> (gekoppeld)</span>}</div>
+              <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>{m.rubriek} · {m.segment} · €{fmt(m.tarief)}</div>
+            </div>
+            <div style={{ width: 120 }}><CapBar used={c.used} total={c.total} /></div>
+            <Btn small primary={!lk && !vol} disabled={lk} style={vol && !lk ? { background: "var(--a)", color: "#fff" } : {}}
+              onClick={() => { if (vol && !confirm("Geen capaciteit! Toch toevoegen?")) return; onSelect(m.id); }}>
+              {lk ? "Gekoppeld" : vol ? "Vol → toevoegen" : "Toevoegen"}
+            </Btn>
+          </div>;
+        })}
+      </div>}
+  </Modal>;
 }
 
 // ============================================================
 // APP
 // ============================================================
-function App(){
-  const[page,setPage]=useState("planners");const[role,setRole]=useState("inkoop");const[toast,setToast]=useState(null);const[dbOk,setDbOk]=useState(null);
-  const show=useCallback((m,t="success")=>setToast({msg:m,type:t}),[]);
-  useEffect(()=>{(async()=>{try{await db.get("leverancier",{limit:1});setDbOk(true)}catch{setDbOk(false)}})()},[]);
-  const nav=[{id:"planners",label:"Planners"},{id:"middelen",label:"Middelen"},{id:"leveranciers",label:"Leveranciers"}];
+function App() {
+  const [page, setPage] = useState("planners");
+  const [role, setRole] = useState("inkoop");
+  const [toast, setToast] = useState(null);
+  const [dbOk, setDbOk] = useState(null);
+  const show = useCallback((m, t = "success") => setToast({ msg: m, type: t }), []);
+  useEffect(() => {
+    (async () => { try { await db.get("leverancier", { limit: 1 }); setDbOk(true); } catch { setDbOk(false); } })();
+  }, []);
+  const nav = [{ id: "planners", label: "Planners" }, { id: "middelen", label: "Middelen" }, { id: "leveranciers", label: "Leveranciers" }];
 
-  return <div style={{display:"flex",minHeight:"100vh",fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif"}}>
-    {toast&&<Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)}/>}
-    <aside style={{width:240,background:"#fff",borderRight:"1px solid var(--b)",display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
-      <div style={{padding:"16px 18px",borderBottom:"1px solid var(--b)"}}>
-        <img src="https://www.c.technischeunie.nl/content/dam/technische-unie/styleguide1/logo/logoTU.png" alt="TU" style={{height:24}} onError={e=>{e.target.style.display="none";e.target.nextSibling.style.display="flex"}}/>
-        <div style={{display:"none",alignItems:"center",gap:6,fontWeight:700,fontSize:14,color:"var(--tu)"}}><span style={{width:22,height:22,borderRadius:4,background:"var(--tu)",color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>TU</span>Technische Unie</div>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--t2)",marginTop:8,letterSpacing:"-.01em"}}>Inzet Marketingmiddelen</div>
-      </div>
-      <nav style={{padding:"12px 10px",flex:1}}>
-        {nav.map(n=><button key={n.id} onClick={()=>setPage(n.id)} style={{display:"flex",alignItems:"center",width:"100%",padding:"8px 10px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:page===n.id?600:400,background:page===n.id?"var(--tul)":"transparent",color:page===n.id?"var(--tu2)":"var(--t2)",marginBottom:2,transition:"all .1s",textAlign:"left"}}>{n.label}</button>)}
-      </nav>
-      <div style={{padding:"12px 18px",borderTop:"1px solid var(--b)"}}>
-        <div style={{fontSize:11,color:"var(--t3)",marginBottom:8}}>Actieve rol</div>
-        <div style={{display:"flex",background:"var(--s2)",borderRadius:6,padding:2,gap:2}}>
-          {[{id:"inkoop",l:"Inkoop"},{id:"marketing",l:"Marketing"}].map(r=><button key={r.id} onClick={()=>setRole(r.id)} style={{flex:1,padding:"5px 0",borderRadius:4,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,transition:"all .12s",background:role===r.id?"var(--tu)":"transparent",color:role===r.id?"#fff":"var(--t3)"}}>{r.l}</button>)}
+  return <div style={{ display: "flex", minHeight: "100vh" }}>
+    {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    <aside style={{ width: 240, background: "#fff", borderRight: "1px solid var(--b)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh" }}>
+      <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--b)" }}>
+        <img src="https://www.c.technischeunie.nl/content/dam/technische-unie/styleguide1/logo/logoTU.png" alt="TU" style={{ height: 24 }} onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
+        <div style={{ display: "none", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 14, color: "var(--tu)" }}>
+          <span style={{ width: 22, height: 22, borderRadius: 4, background: "var(--tu)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800 }}>TU</span>Technische Unie
         </div>
-        <div style={{marginTop:10,display:"flex",alignItems:"center",gap:5}}>
-          <span style={{width:6,height:6,borderRadius:6,background:dbOk?"var(--tu)":"var(--r)"}}/>
-          <span style={{fontSize:11,color:"var(--t3)"}}>{dbOk===null?"Verbinden...":dbOk?"Database online":"Database offline"}</span>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--t2)", marginTop: 8 }}>Inzet Marketingmiddelen</div>
+      </div>
+      <nav style={{ padding: "12px 10px", flex: 1 }}>
+        {nav.map(n => <button key={n.id} onClick={() => setPage(n.id)} style={{ display: "flex", alignItems: "center", width: "100%", padding: "8px 10px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 13, fontWeight: page === n.id ? 600 : 400, background: page === n.id ? "var(--tul)" : "transparent", color: page === n.id ? "var(--tu2)" : "var(--t2)", marginBottom: 2, transition: "all .1s", textAlign: "left" }}>{n.label}</button>)}
+      </nav>
+      <div style={{ padding: "12px 18px", borderTop: "1px solid var(--b)" }}>
+        <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 8 }}>Actieve rol</div>
+        <div style={{ display: "flex", background: "var(--s2)", borderRadius: 6, padding: 2, gap: 2 }}>
+          {[{ id: "inkoop", l: "Inkoop" }, { id: "marketing", l: "Marketing" }].map(r => <button key={r.id} onClick={() => setRole(r.id)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, transition: "all .12s", background: role === r.id ? "var(--tu)" : "transparent", color: role === r.id ? "#fff" : "var(--t3)" }}>{r.l}</button>)}
+        </div>
+        <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 6, height: 6, borderRadius: 6, background: dbOk === null ? "var(--a)" : dbOk ? "var(--tu)" : "var(--r)" }} />
+          <span style={{ fontSize: 11, color: "var(--t3)" }}>{dbOk === null ? "Verbinden..." : dbOk ? "Database online" : "Database offline"}</span>
         </div>
       </div>
     </aside>
-    <div style={{flex:1,background:"var(--bg2)"}}>
-      <div style={{padding:"12px 28px",borderBottom:"1px solid var(--b)",background:"#fff",fontSize:13,color:"var(--t3)",display:"flex",alignItems:"center",gap:6}}>
-        <span>Home</span><span style={{color:"var(--b2)"}}>›</span><span style={{color:"var(--t)",fontWeight:500}}>{nav.find(n=>n.id===page)?.label}</span>
+    <div style={{ flex: 1, background: "var(--bg2)" }}>
+      <div style={{ padding: "12px 28px", borderBottom: "1px solid var(--b)", background: "#fff", fontSize: 13, color: "var(--t3)", display: "flex", alignItems: "center", gap: 6 }}>
+        <span>Home</span><span style={{ color: "var(--b2)" }}>›</span>
+        <span style={{ color: "var(--t)", fontWeight: 500 }}>{nav.find(n => n.id === page)?.label}</span>
       </div>
-      <main style={{padding:"24px 28px 60px"}}>
-        {dbOk===false&&<Card style={{padding:16,marginBottom:16,borderColor:"var(--r)"}}><strong style={{color:"var(--r)"}}>Database niet gevonden</strong><span style={{fontSize:13,color:"var(--t2)",marginLeft:8}}>Draai het SQL-schema in Supabase.</span></Card>}
-        {page==="planners"&&<PlannersPage toast={show} role={role}/>}
-        {page==="middelen"&&<MiddelenPage toast={show}/>}
-        {page==="leveranciers"&&<LeveranciersPage toast={show}/>}
+      <main style={{ padding: "24px 28px 60px" }}>
+        {dbOk === false && <Card style={{ padding: 16, marginBottom: 16, borderColor: "var(--r)" }}><strong style={{ color: "var(--r)" }}>Database niet gevonden</strong><span style={{ fontSize: 13, color: "var(--t2)", marginLeft: 8 }}>Controleer Supabase verbinding.</span></Card>}
+        {page === "planners" && <PlannersPage toast={show} role={role} />}
+        {page === "middelen" && <MiddelenPage toast={show} />}
+        {page === "leveranciers" && <LeveranciersPage toast={show} />}
       </main>
     </div>
-  </div>
+  </div>;
 }
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
