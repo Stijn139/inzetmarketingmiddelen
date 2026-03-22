@@ -197,7 +197,7 @@ function isOverdue(d) { return d && new Date(d) < new Date(); }
 // ============================================================
 // PmRow — redesigned with expand panel, tabs, notes, history
 // ============================================================
-function PmRow({ row, locked, onUpdate, onRemove, last, toast }) {
+function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("details");
   const [notes, setNotes] = useState([]);
@@ -417,7 +417,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast }) {
               {history.length === 0
                 ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>
                     Nog geen wijzigingen vastgelegd
-                    <div style={{ marginTop: 6, fontSize: 11 }}>Voeg tabel <code style={{ background: "var(--s2)", padding: "1px 5px", borderRadius: 3 }}>planner_middel_historie</code> toe in Supabase</div>
+                    {tablesOk === false && <div style={{ marginTop: 6, fontSize: 11 }}>Voeg tabel <code style={{ background: "var(--s2)", padding: "1px 5px", borderRadius: 3 }}>planner_middel_historie</code> toe in Supabase</div>}
                   </div>
                 : <div style={{ position: "relative", paddingLeft: 2 }}>
                   <div style={{ position: "absolute", left: 14, top: 4, bottom: 4, width: 2, background: "var(--b)" }} />
@@ -669,6 +669,7 @@ function PlannersPage({ toast, role }) {
   const [counts, setCounts] = useState({});
   const [allPm, setAllPm] = useState([]);
   const [expanded, setExpanded] = useState({});
+  const [tablesOk, setTablesOk] = useState(null); // null=checking, true=ok, false=missing
   const isMkt = role === "marketing";
 
   const load = useCallback(async () => {
@@ -683,6 +684,12 @@ function PlannersPage({ toast, role }) {
       const c = {}; ap.forEach(x => c[x.planner_id] = (c[x.planner_id] || 0) + 1); setCounts(c);
     } catch (e) { toast(e.message, "error"); }
     setLoading(false);
+    // Check if notes/history tables exist
+    try {
+      await db.get("planner_middel_notities", { limit: 1 });
+      await db.get("planner_middel_historie", { limit: 1 });
+      setTablesOk(true);
+    } catch { setTablesOk(false); }
   }, [toast]);
   useEffect(() => { load(); }, [load]);
 
@@ -765,6 +772,15 @@ function PlannersPage({ toast, role }) {
         for (const c of cs) if (c.gereserveerd > 0) await db.patch("marketingmiddel_capaciteit", c.id, { gereserveerd: c.gereserveerd - 1 });
       }
       await db.patch("planner_marketingmiddel", row.id, data);
+      // Log history entries client-side (fallback als trigger niet bestaat)
+      if (tablesOk) {
+        if (data.status && data.status !== row.status) {
+          try { await db.post("planner_middel_historie", { planner_middel_id: row.id, actie: "status_gewijzigd", beschrijving: `Status gewijzigd van ${row.status} naar ${data.status}`, oude_waarde: row.status, nieuwe_waarde: data.status, auteur: role === "inkoop" ? "Inkoop" : "Marketing" }); } catch {}
+        }
+        if (data.voortgang !== undefined && data.voortgang !== row.voortgang) {
+          try { await db.post("planner_middel_historie", { planner_middel_id: row.id, actie: "voortgang_gewijzigd", beschrijving: `Voortgang gewijzigd van ${row.voortgang}% naar ${data.voortgang}%`, oude_waarde: String(row.voortgang), nieuwe_waarde: String(data.voortgang), auteur: role === "inkoop" ? "Inkoop" : "Marketing" }); } catch {}
+        }
+      }
       toast("Bijgewerkt"); loadPm(detail.id);
     } catch (e) { toast(e.message, "error"); }
   }
@@ -811,16 +827,18 @@ function PlannersPage({ toast, role }) {
         <StatCard label="Gem. voortgang" value={pm.length ? Math.round(pm.reduce((s, r) => s + r.voortgang, 0) / pm.length) + "%" : "—"} delay={150} />
       </div>
 
-      {/* SQL tip */}
-      <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <span>💡</span>
-        <span>Om opmerkingen & historie op te slaan, voeg de tabellen toe in Supabase.
-          <button onClick={() => {
-            const sql = `-- Voer uit in Supabase SQL Editor:\n\nCREATE TABLE planner_middel_notities (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  tekst text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE planner_middel_historie (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  actie text,\n  beschrijving text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\n-- RLS policies:\nALTER TABLE planner_middel_notities ENABLE ROW LEVEL SECURITY;\nALTER TABLE planner_middel_historie ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow all" ON planner_middel_notities FOR ALL USING (true);\nCREATE POLICY "allow all" ON planner_middel_historie FOR ALL USING (true);`;
-            prompt("Kopieer deze SQL en voer uit in Supabase:", sql);
-          }} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontWeight: 700, textDecoration: "underline", marginLeft: 6, padding: 0, fontSize: 12 }}>Bekijk SQL →</button>
-        </span>
-      </div>
+      {/* SQL tip — alleen tonen als tabellen NOG NIET bestaan */}
+      {tablesOk === false && (
+        <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <span>💡</span>
+          <span>Om opmerkingen &amp; historie op te slaan, voeg de tabellen toe in Supabase.
+            <button onClick={() => {
+              const sql = `-- Voer uit in Supabase SQL Editor:\n\nCREATE TABLE planner_middel_notities (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  tekst text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE planner_middel_historie (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  actie text,\n  beschrijving text NOT NULL,\n  oude_waarde text,\n  nieuwe_waarde text,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE planner_middel_notities ENABLE ROW LEVEL SECURITY;\nALTER TABLE planner_middel_historie ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow all" ON planner_middel_notities FOR ALL USING (true) WITH CHECK (true);\nCREATE POLICY "allow all" ON planner_middel_historie FOR ALL USING (true) WITH CHECK (true);`;
+              prompt("Kopieer deze SQL en voer uit in Supabase:", sql);
+            }} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontWeight: 700, textDecoration: "underline", marginLeft: 6, padding: 0, fontSize: 12 }}>Bekijk SQL →</button>
+          </span>
+        </div>
+      )}
 
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
@@ -829,7 +847,7 @@ function PlannersPage({ toast, role }) {
         </div>
         {pm.length === 0
           ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
-          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} />)}</div>
+          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>
         }
       </Card>
       {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.marketingmiddel_id)} toast={toast} />}
