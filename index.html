@@ -71,7 +71,7 @@ const stm={Concept:{bg:"var(--blb)",fg:"var(--bl)"},Actief:{bg:"var(--tul)",fg:"
 function Badge({children,status}){const c=stm[status||children]||{bg:"var(--s2)",fg:"var(--t2)"};return <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px 3px 8px",borderRadius:99,fontSize:12,fontWeight:600,background:c.bg,color:c.fg,whiteSpace:"nowrap"}}><span style={{width:6,height:6,borderRadius:99,background:c.fg,flexShrink:0}}/>{status||children}</span>}
 
 function Btn({children,primary,danger,small,disabled,onClick,style:sx={}}){
-  const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?13:14,opacity:disabled?.45:1,letterSpacing:".01em"};
+  const base={display:"inline-flex",alignItems:"center",gap:6,fontFamily:"Arial,'Helvetica Neue',Helvetica,sans-serif",fontWeight:600,cursor:disabled?"default":"pointer",border:"none",transition:"all .15s",borderRadius:small?"var(--rdx)":"var(--rds)",padding:small?"6px 12px":"9px 18px",fontSize:small?13:14,opacity:disabled?0.45:1,letterSpacing:".01em"};
   const v=primary?{background:"var(--tu)",color:"#fff",boxShadow:"0 1px 3px rgba(0,132,61,.2),inset 0 1px 0 rgba(255,255,255,.1)"}:danger?{background:"transparent",color:"var(--r)",border:"1.5px solid var(--r)"}:{background:"var(--s)",color:"var(--t2)",border:"1.5px solid var(--b)",boxShadow:"var(--sh)"};
   return <button style={{...base,...v,...sx}} disabled={disabled} onClick={onClick}>{children}</button>
 }
@@ -451,7 +451,7 @@ function SelModal({onSelect,onClose,existing,toast}){
     {loading?<div style={{padding:40,textAlign:"center",color:"var(--t3)"}}>Laden...</div>:
     <div style={{maxHeight:420,overflow:"auto",borderRadius:"var(--rdx)",border:"1px solid var(--b)"}}>
       {fl.map((m,i)=>{const c=getCap(caps,m.id);const av=c.total-c.used;const lk=existing.includes(m.id);const vol=av<=0;
-        return <div key={m.id} style={{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<fl.length-1?"1px solid var(--b)":"none",opacity:lk?.4:1,gap:14}}>
+        return <div key={m.id} style={{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<fl.length-1?"1px solid var(--b)":"none",opacity:lk?0.4:1,gap:14}}>
           <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{m.pakketnaam}{lk&&<span style={{fontSize:11,color:"var(--t3)"}}> (gekoppeld)</span>}</div><div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{m.rubriek} · {m.segment} · €{fmt(m.tarief)}</div></div>
           <div style={{width:120}}><CapBar used={c.used} total={c.total}/></div>
           <Btn small primary={!lk&&!vol} disabled={lk} style={vol&&!lk?{background:"var(--a)",color:"#fff"}:{}} onClick={()=>{if(vol&&!confirm("Geen capaciteit! Toch toevoegen?"))return;onSelect(m.id)}}>{lk?"Gekoppeld":vol?"Vol → toevoegen":"Toevoegen"}</Btn>
