@@ -479,9 +479,11 @@ function FormaatRow({ f, i, isInkoop, allFmt, mid, onUpdate, onRemove, last }) {
     }
   }
 
-  return <tr style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
-    <td style={{ padding: "8px 16px", width: "50%" }}>
-      {isInkoop ? <span style={{ fontSize: 14 }}>{f.formaat}</span>
+  return <div style={{ display: "flex", alignItems: "center", padding: "10px 24px", borderBottom: last ? "none" : "1px solid var(--b)", gap: 16 }}>
+    {/* Formaat */}
+    <div style={{ flex: 1, minWidth: 140 }}>
+      {i === 0 && <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", marginBottom: 4 }}>Formaat</div>}
+      {isInkoop ? <span style={{ fontSize: 14, fontWeight: 600 }}>{f.formaat}</span>
         : customMode ? (
           <div style={{ display: "flex", gap: 4 }}>
             <input value={customVal} onChange={e => setCustomVal(e.target.value)}
@@ -493,24 +495,32 @@ function FormaatRow({ f, i, isInkoop, allFmt, mid, onUpdate, onRemove, last }) {
           </div>
         ) : (
           <select value={f.formaat} onChange={handleSelect}
-            style={{ width: "100%", padding: "9px 36px 9px 12px", fontSize: 14 }}>
+            style={{ width: "100%", maxWidth: 220, padding: "8px 36px 8px 12px", fontSize: 13 }}>
             {!f.formaat && <option value="">Kies formaat...</option>}
             {allFmt.map(o => <option key={o} value={o}>{o}</option>)}
             {f.formaat && !allFmt.includes(f.formaat) && <option value={f.formaat}>{f.formaat}</option>}
             <option value="__new__">+ Nieuw formaat...</option>
           </select>
         )}
-    </td>
-    <td style={{ padding: "8px 16px" }}>
-      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(f.tarief)}</span>
-        : <input type="number" step="0.01" value={f.tarief}
-            onChange={e => onUpdate(mid, i, "tarief", parseFloat(e.target.value) || 0)}
-            style={{ width: 140, fontFamily: "'JetBrains Mono',monospace" }} />}
-    </td>
-    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
-      <Btn small danger onClick={() => onRemove(mid, i)}>✕</Btn>
-    </td>}
-  </tr>;
+    </div>
+    {/* Tarief */}
+    <div style={{ flex: "0 0 auto" }}>
+      {i === 0 && <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", marginBottom: 4 }}>Tarief</div>}
+      {isInkoop ? <span style={{ fontSize: 14, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(f.tarief)}</span>
+        : <div style={{ position: "relative" }}>
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--t3)", fontSize: 13, fontFamily: "'JetBrains Mono',monospace", pointerEvents: "none" }}>€</span>
+            <input type="number" step="0.01" value={f.tarief}
+              onChange={e => onUpdate(mid, i, "tarief", parseFloat(e.target.value) || 0)}
+              style={{ width: 120, fontFamily: "'JetBrains Mono',monospace", fontSize: 13, paddingLeft: 24 }} />
+          </div>}
+    </div>
+    {/* Delete */}
+    {!isInkoop && (
+      <div style={{ flexShrink: 0 }}>
+        <Btn small ghost onClick={() => onRemove(mid, i)} style={{ color: "var(--r)", padding: "4px 6px" }}>✕</Btn>
+      </div>
+    )}
+  </div>;
 }
 
 // ============================================================
@@ -597,23 +607,44 @@ function MiddelenPage({ toast, role }) {
     const hasFormaten = d.formaten.length > 0;
     const nextDeadline = d.periodes.filter(p => p.deadline_leverancier && new Date(p.deadline_leverancier) >= new Date()).sort((a, b) => a.deadline_leverancier.localeCompare(b.deadline_leverancier))[0];
 
-    return <div>
-      <button onClick={() => setDetail(null)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug naar overzicht</button>
+    // Track if there are unsaved changes (compare with original MIGRATION data)
+    const orig = MIGRATION.middelen.find(m => m.pakketnaam === d.pakketnaam);
+    const hasChanges = !orig || JSON.stringify({ f: d.formaten, p: d.periodes, b: d.basistarief }) !== JSON.stringify({ f: orig.formaten, p: orig.periodes, b: orig.basistarief });
+
+    function discardChanges() {
+      if (!orig) return;
+      if (!confirm("Alle wijzigingen ongedaan maken?")) return;
+      const restored = { ...d, formaten: [...orig.formaten], periodes: [...orig.periodes], basistarief: orig.basistarief };
+      setItems(prev => prev.map(m => m._id === d._id ? restored : m));
+      setDetail(restored);
+      toast("Wijzigingen ongedaan gemaakt");
+    }
+
+    function saveChanges() {
+      // In-memory save is already done (live editing). This confirms intent.
+      toast("Wijzigingen opgeslagen");
+    }
+
+    return <div style={{ paddingBottom: hasChanges && !isInkoop ? 72 : 0 }}>
+      <button onClick={() => { if (hasChanges && !isInkoop && !confirm("Je hebt onopgeslagen wijzigingen. Toch terug?")) return; setDetail(null); }}
+        style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>
+        ← Terug naar overzicht
+      </button>
 
       {/* Header card */}
-      <Card style={{ padding: 28, marginBottom: 20 }}>
+      <Card style={{ padding: "24px 28px", marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{d.marketingmiddel}</div>
-            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{d.pakketnaam}</h2>
-            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              {d.rubriek && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{d.rubriek}</span>}
-              {d.segment && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{d.segment}</span>}
-              {d.doorbelasting && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--tul)", color: "var(--tu2)", fontWeight: 600 }}>Doorbelasting</span>}
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 2 }}>{d.marketingmiddel}</div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{d.pakketnaam}</h2>
+            <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+              {d.rubriek && <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{d.rubriek}</span>}
+              {d.segment && <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{d.segment}</span>}
+              {d.doorbelasting && <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99, background: "var(--tul)", color: "var(--tu2)", fontWeight: 600 }}>Doorbelasting PN</span>}
             </div>
           </div>
-          {!isInkoop && <div style={{ display: "flex", gap: 8 }}>
-            <Btn small onClick={() => setModal(d)}>Bewerken</Btn>
+          {!isInkoop && <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Btn small onClick={() => setModal(d)}>✎ Bewerken</Btn>
             <Btn small danger onClick={() => remove(d)}>Verwijderen</Btn>
           </div>}
         </div>
@@ -629,32 +660,35 @@ function MiddelenPage({ toast, role }) {
 
       {/* ── FORMATEN & TARIEVEN ── */}
       <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--b)" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Formaten & Tarieven</h3>
-          {!isInkoop && hasFormaten && <Btn small primary onClick={() => addFormaat(d._id)}>+ Formaat</Btn>}
         </div>
         {hasFormaten ? (
-          <div style={{ padding: 0 }}>
-            <table>
-              <thead><tr><Th>Formaat</Th><Th>Tarief</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
-              <tbody>
-                {d.formaten.map((f, i) => (
-                  <FormaatRow key={i} f={f} i={i} isInkoop={isInkoop} allFmt={allFmt} mid={d._id}
-                    onUpdate={updateFormaat} onRemove={removeFormaat} last={i === d.formaten.length - 1} />
-                ))}
-              </tbody>
-            </table>
+          <div>
+            {d.formaten.map((f, i) => (
+              <FormaatRow key={i} f={f} i={i} isInkoop={isInkoop} allFmt={allFmt} mid={d._id}
+                onUpdate={updateFormaat} onRemove={removeFormaat} last={i === d.formaten.length - 1} />
+            ))}
+            {!isInkoop && (
+              <div style={{ padding: "12px 24px", borderTop: "1px solid var(--b)" }}>
+                <Btn small onClick={() => addFormaat(d._id)} style={{ color: "var(--tu)" }}>+ Formaat toevoegen</Btn>
+              </div>
+            )}
           </div>
         ) : (
-          <div style={{ padding: "16px 24px" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 6 }}>Basistarief</div>
+          <div style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 8 }}>Basistarief</div>
             {isInkoop ? (
-              <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>
+              <span style={{ fontSize: 22, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>
                 {d.basistarief != null ? `€${fmt(d.basistarief)}` : "—"}
               </span>
             ) : (
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <input type="number" step="0.01" value={d.basistarief ?? ""} onChange={e => updateBasistarief(d._id, e.target.value ? parseFloat(e.target.value) : null)} style={{ width: 180, fontFamily: "'JetBrains Mono',monospace" }} placeholder="Tarief (€)" />
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--t3)", fontSize: 14, fontFamily: "'JetBrains Mono',monospace", pointerEvents: "none" }}>€</span>
+                  <input type="number" step="0.01" value={d.basistarief ?? ""} onChange={e => updateBasistarief(d._id, e.target.value ? parseFloat(e.target.value) : null)}
+                    style={{ width: 160, fontFamily: "'JetBrains Mono',monospace", paddingLeft: 28 }} placeholder="0,00" />
+                </div>
                 <span style={{ fontSize: 12, color: "var(--t3)" }}>of</span>
                 <Btn small onClick={() => addFormaat(d._id)}>+ Formaatvarianten toevoegen</Btn>
               </div>
@@ -665,63 +699,102 @@ function MiddelenPage({ toast, role }) {
 
       {/* ── CAPACITEITSPERIODES ── */}
       <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--b)" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Capaciteitsperiodes <span style={{ color: "var(--t3)", fontWeight: 400 }}>({d.periodes.length})</span></h3>
-          {!isInkoop && <Btn small primary onClick={() => addPeriode(d._id)}>+ Periode</Btn>}
         </div>
         {d.periodes.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> : (
           <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead><tr><Th>Jaar</Th><Th>Maand / Periode</Th><Th>Publicatiedatum</Th><Th>Deadline leverancier</Th><Th>Capaciteit</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
-              <tbody>
-                {d.periodes.map((p, i) => {
-                  const dlOverdue = p.deadline_leverancier && new Date(p.deadline_leverancier) < new Date();
-                  const cap = p.totale_capaciteit || 0;
-                  const res = p.gereserveerd || 0;
-                  return <tr key={i} style={{ borderBottom: i < d.periodes.length - 1 ? "1px solid var(--b)" : "none" }}>
-                    <td style={{ padding: "8px 16px" }}>
-                      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>{p.jaar}</span>
-                        : <input type="number" value={p.jaar || ""} onChange={e => updatePeriode(d._id, i, "jaar", parseInt(e.target.value) || null)} style={{ width: 80, fontFamily: "'JetBrains Mono',monospace" }} />}
-                    </td>
-                    <td style={{ padding: "8px 16px" }}>
-                      {isInkoop ? <span style={{ fontSize: 14 }}>{p.maand}</span>
-                        : <input value={p.maand} onChange={e => updatePeriode(d._id, i, "maand", e.target.value)} style={{ width: 160 }} placeholder="bijv. april, juli-augustus" />}
-                    </td>
-                    <td style={{ padding: "8px 16px" }}>
-                      {isInkoop ? <span style={{ fontSize: 13 }}>{p.publicatiedatum ? fmtD(p.publicatiedatum) : "—"}</span>
-                        : <input type="date" value={p.publicatiedatum || ""} onChange={e => updatePeriode(d._id, i, "publicatiedatum", e.target.value || null)} />}
-                    </td>
-                    <td style={{ padding: "8px 16px" }}>
-                      {isInkoop ? (
-                        <span style={{ fontSize: 13, fontWeight: dlOverdue ? 600 : 400, color: dlOverdue ? "var(--r)" : "var(--t2)" }}>
-                          {p.deadline_leverancier ? fmtD(p.deadline_leverancier) : "—"}{dlOverdue ? " ⚠" : ""}
-                        </span>
-                      ) : <input type="date" value={p.deadline_leverancier || ""} onChange={e => updatePeriode(d._id, i, "deadline_leverancier", e.target.value || null)} />}
-                    </td>
-                    <td style={{ padding: "8px 16px", minWidth: 160 }}>
-                      {isInkoop ? (
-                        cap > 0 ? <CapBar used={res} total={cap} /> : <span style={{ fontSize: 12, color: "var(--t3)" }}>—</span>
-                      ) : (
-                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <input type="number" min="0" value={res} onChange={e => updatePeriode(d._id, i, "gereserveerd", parseInt(e.target.value) || 0)}
-                            style={{ width: 50, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "6px 4px" }} title="Gereserveerd" />
-                          <span style={{ color: "var(--t3)", fontSize: 12 }}>/</span>
-                          <input type="number" min="0" value={cap} onChange={e => updatePeriode(d._id, i, "totale_capaciteit", parseInt(e.target.value) || 0)}
-                            style={{ width: 50, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "6px 4px" }} title="Totale capaciteit" />
-                          {cap > 0 && <div style={{ width: 60 }}><CapBar used={res} total={cap} /></div>}
-                        </div>
-                      )}
-                    </td>
-                    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
-                      <Btn small danger onClick={() => removePeriode(d._id, i)}>✕</Btn>
-                    </td>}
-                  </tr>;
-                })}
-              </tbody>
-            </table>
+            {d.periodes.map((p, i) => {
+              const dlOverdue = p.deadline_leverancier && new Date(p.deadline_leverancier) < new Date();
+              const cap = p.totale_capaciteit || 0;
+              const res = p.gereserveerd || 0;
+              return <div key={i} style={{ display: "flex", alignItems: "center", padding: "12px 24px", borderBottom: i < d.periodes.length - 1 ? "1px solid var(--b)" : "none", gap: 16, flexWrap: "wrap" }}>
+                {/* Periode (maand + jaar) */}
+                <div style={{ minWidth: 200, flex: "0 0 auto" }}>
+                  {isInkoop ? (
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{p.maand} <span style={{ color: "var(--t3)", fontFamily: "'JetBrains Mono',monospace" }}>{p.jaar}</span></span>
+                  ) : (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input value={p.maand} onChange={e => updatePeriode(d._id, i, "maand", e.target.value)}
+                        style={{ width: 130, fontSize: 13 }} placeholder="bijv. april" />
+                      <input type="number" value={p.jaar || ""} onChange={e => updatePeriode(d._id, i, "jaar", parseInt(e.target.value) || null)}
+                        style={{ width: 68, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Publicatiedatum */}
+                <div style={{ minWidth: 140, flex: "0 0 auto" }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", marginBottom: 3 }}>Publicatie</div>
+                  {isInkoop ? <span style={{ fontSize: 13, color: "var(--t2)" }}>{p.publicatiedatum ? fmtD(p.publicatiedatum) : "—"}</span>
+                    : <input type="date" value={p.publicatiedatum || ""} onChange={e => updatePeriode(d._id, i, "publicatiedatum", e.target.value || null)} style={{ fontSize: 12 }} />}
+                </div>
+
+                {/* Deadline */}
+                <div style={{ minWidth: 140, flex: "0 0 auto" }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: dlOverdue ? "var(--r)" : "var(--t3)", marginBottom: 3 }}>
+                    Deadline{dlOverdue ? " ⚠" : ""}
+                  </div>
+                  {isInkoop ? (
+                    <span style={{ fontSize: 13, fontWeight: dlOverdue ? 600 : 400, color: dlOverdue ? "var(--r)" : "var(--t2)" }}>
+                      {p.deadline_leverancier ? fmtD(p.deadline_leverancier) : "—"}
+                    </span>
+                  ) : <input type="date" value={p.deadline_leverancier || ""} onChange={e => updatePeriode(d._id, i, "deadline_leverancier", e.target.value || null)} style={{ fontSize: 12 }} />}
+                </div>
+
+                {/* Capaciteit */}
+                <div style={{ minWidth: 130, flex: "1 0 auto" }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", marginBottom: 3 }}>Capaciteit</div>
+                  {isInkoop ? (
+                    cap > 0 ? <CapBar used={res} total={cap} /> : <span style={{ fontSize: 12, color: "var(--t3)" }}>—</span>
+                  ) : (
+                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                      <input type="number" min="0" value={res} onChange={e => updatePeriode(d._id, i, "gereserveerd", parseInt(e.target.value) || 0)}
+                        style={{ width: 44, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "5px 2px", fontSize: 13 }} title="Bezet" />
+                      <span style={{ color: "var(--t3)", fontSize: 11 }}>/</span>
+                      <input type="number" min="0" value={cap} onChange={e => updatePeriode(d._id, i, "totale_capaciteit", parseInt(e.target.value) || 0)}
+                        style={{ width: 44, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "5px 2px", fontSize: 13 }} title="Totaal" />
+                      {cap > 0 && <div style={{ width: 50, marginLeft: 4 }}><CapBar used={res} total={cap} /></div>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Delete */}
+                {!isInkoop && (
+                  <div style={{ flexShrink: 0 }}>
+                    <Btn small ghost onClick={() => removePeriode(d._id, i)} style={{ color: "var(--r)", padding: "4px 6px" }}>✕</Btn>
+                  </div>
+                )}
+              </div>;
+            })}
+          </div>
+        )}
+        {!isInkoop && (
+          <div style={{ padding: "12px 24px", borderTop: d.periodes.length > 0 ? "1px solid var(--b)" : "none" }}>
+            <Btn small onClick={() => addPeriode(d._id)} style={{ color: "var(--tu)" }}>+ Periode toevoegen</Btn>
           </div>
         )}
       </Card>
+
+      {/* ── STICKY SAVE BAR ── */}
+      {hasChanges && !isInkoop && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 240, right: 0, zIndex: 100,
+          background: "var(--s)", borderTop: "2px solid var(--tu)",
+          padding: "12px 28px",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          boxShadow: "0 -4px 20px rgba(0,0,0,.08)"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: "var(--a)", flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: "var(--t2)" }}>Je hebt onopgeslagen wijzigingen</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn small onClick={discardChanges}>Ongedaan maken</Btn>
+            <Btn primary onClick={saveChanges}>Wijzigingen opslaan</Btn>
+          </div>
+        </div>
+      )}
 
       {modal && <MiddelForm item={modal} onSave={save} onClose={() => setModal(null)} allMM={allMM} allRub={allRub} allSeg={allSeg} pakketten={pakketten} />}
     </div>;
