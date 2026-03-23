@@ -447,9 +447,9 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
 }
 
 // ============================================================
-// MIDDELEN PAGE
+// MIDDELEN PAGE — Marketing = schrijfrechten, Inkoop = read-only
 // ============================================================
-function MiddelenPage({ toast }) {
+function MiddelenPage({ toast, role }) {
   const [items, setItems] = useState([]);
   const [caps, setCaps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -457,6 +457,7 @@ function MiddelenPage({ toast }) {
   const [detail, setDetail] = useState(null);
   const [capModal, setCapModal] = useState(null);
   const [f, setF] = useState({});
+  const isInkoop = role === "inkoop";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -521,10 +522,10 @@ function MiddelenPage({ toast }) {
             <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{detail.rubriek} · {detail.segment}</div>
             <h2 style={{ fontSize: 20, fontWeight: 700 }}>{detail.pakketnaam}</h2>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          {!isInkoop && <div style={{ display: "flex", gap: 8 }}>
             <Btn small onClick={() => setModal(detail)}>Bewerken</Btn>
             <Btn small danger onClick={() => remove(detail)}>Verwijderen</Btn>
-          </div>
+          </div>}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 16, marginTop: 20 }}>
           {[["Formaat", detail.formaat || "—"], ["Tarief", `€ ${fmt(detail.tarief)}`], ["Type Campagne", detail.type_campagne], ["Periode", fmtPeriod(detail.startdatum, detail.einddatum) || "—"], ["Startdatum", fmtD(detail.startdatum) || "—"], ["Einddatum", fmtD(detail.einddatum) || "—"], ["Deadline", fmtD(detail.deadline) || "—"]].map(([l, v]) => (
@@ -535,7 +536,7 @@ function MiddelenPage({ toast }) {
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Capaciteitsperiodes</h3>
-          <Btn small primary onClick={() => setCapModal("new")}>+ Periode</Btn>
+          {!isInkoop && <Btn small primary onClick={() => setCapModal("new")}>+ Periode</Btn>}
         </div>
         {mCaps.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> :
           <div style={{ padding: "4px 0" }}>
@@ -555,10 +556,10 @@ function MiddelenPage({ toast }) {
                   <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: av <= 0 ? "var(--r)" : "var(--t)" }}>{av}</div>
                   <div style={{ fontSize: 11, color: "var(--t3)" }}>beschikbaar</div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
+                {!isInkoop && <div style={{ display: "flex", gap: 6 }}>
                   <Btn small onClick={() => setCapModal(c)}>✎</Btn>
                   <Btn small danger onClick={() => delCap(c)}>✕</Btn>
-                </div>
+                </div>}
               </div>;
             })}
           </div>}
@@ -570,8 +571,8 @@ function MiddelenPage({ toast }) {
 
   return <div>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-      <div><h2 style={{ fontSize: 22, fontWeight: 700 }}>Marketingmiddelen</h2><p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} middelen</p></div>
-      <Btn primary onClick={() => setModal("new")}>+ Nieuw middel</Btn>
+      <div><h2 style={{ fontSize: 22, fontWeight: 700 }}>Marketingmiddelen{isInkoop && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2><p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} middelen</p></div>
+      {!isInkoop && <Btn primary onClick={() => setModal("new")}>+ Nieuw middel</Btn>}
     </div>
     <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "rubriek", placeholder: "Alle rubrieken", opts: rubs }, { key: "segment", placeholder: "Alle segmenten", opts: segs }, { key: "type_campagne", placeholder: "Alle types", opts: tcs }, { key: "beschikbaar", placeholder: "Beschikbaarheid", opts: ["beschikbaar", "vol"] }]} />
     {loading ? <Card style={{ padding: 0 }}>{[...Array(4)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "60%", marginBottom: 8 }} /><div className="sk" style={{ width: "30%" }} /></div>)}</Card>
@@ -656,7 +657,7 @@ function LeveranciersPage({ toast }) {
 }
 
 // ============================================================
-// PLANNERS PAGE
+// PLANNERS PAGE — Inkoop = schrijfrechten, Marketing = read-only
 // ============================================================
 function PlannersPage({ toast, role }) {
   const [planners, setPlanners] = useState([]);
@@ -670,7 +671,7 @@ function PlannersPage({ toast, role }) {
   const [counts, setCounts] = useState({});
   const [allPm, setAllPm] = useState([]);
   const [expanded, setExpanded] = useState({});
-  const [tablesOk, setTablesOk] = useState(null); // null=checking, true=ok, false=missing
+  const [tablesOk, setTablesOk] = useState(null);
   const isMkt = role === "marketing";
 
   const load = useCallback(async () => {
@@ -685,7 +686,6 @@ function PlannersPage({ toast, role }) {
       const c = {}; ap.forEach(x => c[x.planner_id] = (c[x.planner_id] || 0) + 1); setCounts(c);
     } catch (e) { toast(e.message, "error"); }
     setLoading(false);
-    // Check if notes/history tables exist
     try {
       await db.get("planner_middel_notities", { limit: 1 });
       await db.get("planner_middel_historie", { limit: 1 });
@@ -773,7 +773,6 @@ function PlannersPage({ toast, role }) {
         for (const c of cs) if (c.gereserveerd > 0) await db.patch("marketingmiddel_capaciteit", c.id, { gereserveerd: c.gereserveerd - 1 });
       }
       await db.patch("planner_marketingmiddel", row.id, data);
-      // Log history entries client-side (fallback als trigger niet bestaat)
       if (tablesOk) {
         if (data.status && data.status !== row.status) {
           try { await db.post("planner_middel_historie", { planner_middel_id: row.id, actie: "status_gewijzigd", beschrijving: `Status gewijzigd van ${row.status} naar ${data.status}`, oude_waarde: row.status, nieuwe_waarde: data.status, auteur: role === "inkoop" ? "Inkoop" : "Marketing" }); } catch {}
@@ -801,26 +800,15 @@ function PlannersPage({ toast, role }) {
       const XLSX = window.XLSX;
       const wb = XLSX.utils.book_new();
 
-      // TAB 1: Planners overzicht
       const h1 = ["Planner titel","Leverancier","Leveranciernummer","Type","Status","Aantal middelen","Totaal tarief (EUR)","Gem. voortgang (%)"];
       const r1 = filtered.map(p => {
         const mm = middelenPerPlanner[p.id] || [];
-        return [
-          p.titel,
-          p.leverancier?.bedrijfsnaam || "",
-          p.leverancier?.leveranciernummer || "",
-          p.type || "",
-          p.status || "",
-          mm.length,
-          mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0),
-          mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0
-        ];
+        return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0];
       });
       const ws1 = XLSX.utils.aoa_to_sheet([h1, ...r1]);
       ws1["!cols"] = [32,24,18,16,14,16,20,16].map(w=>({wch:w}));
       XLSX.utils.book_append_sheet(wb, ws1, "Planners");
 
-      // TAB 2: Middelen detail
       const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Rubriek","Segment","Type campagne","Formaat","Tarief (EUR)","Status middel","Voortgang (%)","Startdatum","Einddatum","Deadline"];
       const r2 = [];
       filtered.forEach(p => {
@@ -828,20 +816,13 @@ function PlannersPage({ toast, role }) {
         if (mm.length === 0) {
           r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","","","",""]);
         } else {
-          mm.forEach(m => r2.push([
-            p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"",
-            m.marketingmiddel?.pakketnaam||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"",
-            m.marketingmiddel?.type_campagne||"", m.marketingmiddel?.formaat||"",
-            Number(m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0,
-            m.startdatum||"", m.einddatum||"", m.deadline||""
-          ]));
+          mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", m.marketingmiddel?.type_campagne||"", m.marketingmiddel?.formaat||"", Number(m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.einddatum||"", m.deadline||""]));
         }
       });
       const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]);
       ws2["!cols"] = [28,22,18,14,14,36,16,14,16,14,14,16,14,14,14,14].map(w=>({wch:w}));
       XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
 
-      // TAB 3: Samenvatting per leverancier
       const byLev = {};
       filtered.forEach(p => {
         const key = p.leverancier?.bedrijfsnaam || "Onbekend";
@@ -895,7 +876,6 @@ function PlannersPage({ toast, role }) {
         <StatCard label="Gem. voortgang" value={pm.length ? Math.round(pm.reduce((s, r) => s + r.voortgang, 0) / pm.length) + "%" : "—"} delay={150} />
       </div>
 
-      {/* SQL tip — alleen tonen als tabellen NOG NIET bestaan */}
       {tablesOk === false && (
         <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span>💡</span>
@@ -1118,7 +1098,7 @@ function App() {
       <main style={{ padding: "24px 28px 60px" }}>
         {dbOk === false && <Card style={{ padding: 16, marginBottom: 16, borderColor: "var(--r)" }}><strong style={{ color: "var(--r)" }}>Database niet gevonden</strong><span style={{ fontSize: 13, color: "var(--t2)", marginLeft: 8 }}>Controleer Supabase verbinding.</span></Card>}
         {page === "planners" && <PlannersPage toast={show} role={role} />}
-        {page === "middelen" && <MiddelenPage toast={show} />}
+        {page === "middelen" && <MiddelenPage toast={show} role={role} />}
         {page === "leveranciers" && <LeveranciersPage toast={show} />}
       </main>
     </div>
