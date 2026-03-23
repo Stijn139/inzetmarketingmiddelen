@@ -206,7 +206,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   const [noteText, setNoteText] = useState("");
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [d, setD] = useState({ voortgang: row.voortgang, status: row.status });
+  const [d, setD] = useState({ status: row.status });
   const [notesLoaded, setNotesLoaded] = useState(false);
 
   const overdue = isOverdue(row.deadline);
@@ -265,7 +265,6 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
             {deadline && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: overdue ? "var(--r)" : "var(--a)", background: overdue ? "var(--rb)" : "var(--ab)", border: `1px solid ${overdue ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`, borderRadius: 4, padding: "3px 8px" }}>{overdue ? "⚠️ Verlopen:" : "⏱ Deadline:"} {deadline}</span>}
             {notes.length > 0 && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--t3)", background: "var(--s2)", borderRadius: 4, padding: "3px 7px", border: "1px solid var(--b)" }}>💬 {notes.length}</span>}
           </div>
-          <div style={{ maxWidth: 260 }}><Progress value={row.voortgang} /></div>
         </div>
         <div style={{ display: "flex", alignItems: "center", padding: "0 14px", color: "var(--t3)", flexShrink: 0 }}>
           <span style={{ transform: open ? "rotate(90deg)" : "rotate(0)", transition: "transform .2s", display: "block", fontSize: 20 }}>›</span>
@@ -291,8 +290,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
             <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
               {editMode ? (
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-                    <Field label="Voortgang (%)"><input type="number" min="0" max="100" value={d.voortgang} onChange={e => setD(p => ({ ...p, voortgang: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} /></Field>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 16px", maxWidth: 280 }}>
                     <Field label="Status"><select value={d.status} onChange={e => setD(p => ({ ...p, status: e.target.value }))}>{["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s}>{s}</option>)}</select></Field>
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -302,7 +300,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
-                  {[["Status", <Badge status={row.status} />], ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
+                  {[["Status", <Badge status={row.status} />], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
                     <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
                   ))}
                 </div>
@@ -602,26 +600,42 @@ function MiddelenPage({ toast, role }) {
   }
 
   // ── DETAIL VIEW ──
+  // savedSnapshot tracks the last-saved state for change detection
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
+
+  // When entering detail view, snapshot the current state
+  useEffect(() => {
+    if (detail) {
+      const d = items.find(m => m._id === detail._id);
+      if (d && !savedSnapshot) {
+        setSavedSnapshot(JSON.stringify({ f: d.formaten, p: d.periodes, b: d.basistarief }));
+      }
+    } else {
+      setSavedSnapshot(null);
+    }
+  }, [detail?._id]);
+
   if (detail) {
     const d = items.find(m => m._id === detail._id) || detail;
     const hasFormaten = d.formaten.length > 0;
     const nextDeadline = d.periodes.filter(p => p.deadline_leverancier && new Date(p.deadline_leverancier) >= new Date()).sort((a, b) => a.deadline_leverancier.localeCompare(b.deadline_leverancier))[0];
 
-    // Track if there are unsaved changes (compare with original MIGRATION data)
-    const orig = MIGRATION.middelen.find(m => m.pakketnaam === d.pakketnaam);
-    const hasChanges = !orig || JSON.stringify({ f: d.formaten, p: d.periodes, b: d.basistarief }) !== JSON.stringify({ f: orig.formaten, p: orig.periodes, b: orig.basistarief });
+    const currentState = JSON.stringify({ f: d.formaten, p: d.periodes, b: d.basistarief });
+    const hasChanges = savedSnapshot != null && currentState !== savedSnapshot;
 
     function discardChanges() {
-      if (!orig) return;
+      if (!savedSnapshot) return;
       if (!confirm("Alle wijzigingen ongedaan maken?")) return;
-      const restored = { ...d, formaten: [...orig.formaten], periodes: [...orig.periodes], basistarief: orig.basistarief };
+      const snap = JSON.parse(savedSnapshot);
+      const restored = { ...d, formaten: snap.f, periodes: snap.p, basistarief: snap.b };
       setItems(prev => prev.map(m => m._id === d._id ? restored : m));
       setDetail(restored);
       toast("Wijzigingen ongedaan gemaakt");
     }
 
     function saveChanges() {
-      // In-memory save is already done (live editing). This confirms intent.
+      // Update the snapshot to current state — this clears hasChanges
+      setSavedSnapshot(JSON.stringify({ f: d.formaten, p: d.periodes, b: d.basistarief }));
       toast("Wijzigingen opgeslagen");
     }
 
@@ -718,7 +732,7 @@ function MiddelenPage({ toast, role }) {
                       <input value={p.maand} onChange={e => updatePeriode(d._id, i, "maand", e.target.value)}
                         style={{ width: 130, fontSize: 13 }} placeholder="bijv. april" />
                       <input type="number" value={p.jaar || ""} onChange={e => updatePeriode(d._id, i, "jaar", parseInt(e.target.value) || null)}
-                        style={{ width: 68, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }} />
+                        style={{ width: 76, fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }} />
                     </div>
                   )}
                 </div>
@@ -1081,9 +1095,6 @@ function PlannersPage({ toast, role }) {
         if (data.status && data.status !== row.status) {
           try { await db.post("planner_middel_historie", { planner_middel_id: row.id, actie: "status_gewijzigd", beschrijving: `Status gewijzigd van ${row.status} naar ${data.status}`, oude_waarde: row.status, nieuwe_waarde: data.status, auteur: role === "inkoop" ? "Inkoop" : "Marketing" }); } catch {}
         }
-        if (data.voortgang !== undefined && data.voortgang !== row.voortgang) {
-          try { await db.post("planner_middel_historie", { planner_middel_id: row.id, actie: "voortgang_gewijzigd", beschrijving: `Voortgang gewijzigd van ${row.voortgang}% naar ${data.voortgang}%`, oude_waarde: String(row.voortgang), nieuwe_waarde: String(data.voortgang), auteur: role === "inkoop" ? "Inkoop" : "Marketing" }); } catch {}
-        }
       }
       toast("Bijgewerkt"); loadPm(detail.id);
     } catch (e) { toast(e.message, "error"); }
@@ -1097,12 +1108,12 @@ function PlannersPage({ toast, role }) {
       allMiddelen.forEach(m => { if (!middelenPerPlanner[m.planner_id]) middelenPerPlanner[m.planner_id] = []; middelenPerPlanner[m.planner_id].push(m); });
       const XLSX = window.XLSX;
       const wb = XLSX.utils.book_new();
-      const h1 = ["Planner titel","Leverancier","Leveranciernummer","Type","Status","Aantal middelen","Totaal tarief (EUR)","Gem. voortgang (%)"];
-      const r1 = filtered.map(p => { const mm = middelenPerPlanner[p.id] || []; return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0]; });
+      const h1 = ["Planner titel","Leverancier","Leveranciernummer","Type","Status","Aantal middelen","Totaal tarief (EUR)"];
+      const r1 = filtered.map(p => { const mm = middelenPerPlanner[p.id] || []; return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), 0)]; });
       const ws1 = XLSX.utils.aoa_to_sheet([h1, ...r1]); ws1["!cols"] = [32,24,18,16,14,16,20,16].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws1, "Planners");
-      const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Formaat","Rubriek","Segment","Tarief (EUR)","Status middel","Voortgang (%)","Startdatum","Deadline"];
+      const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Formaat","Rubriek","Segment","Tarief (EUR)","Status middel","Startdatum","Deadline"];
       const r2 = [];
-      filtered.forEach(p => { const mm = middelenPerPlanner[p.id] || []; if (mm.length === 0) { r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","",""]); } else { mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.gekozen_formaat||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.deadline||""])); } });
+      filtered.forEach(p => { const mm = middelenPerPlanner[p.id] || []; if (mm.length === 0) { r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","",""]); } else { mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.gekozen_formaat||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), m.status||"", m.startdatum||"", m.deadline||""])); } });
       const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]); ws2["!cols"] = [28,22,18,14,14,36,14,16,14,14,16,14,14,14].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
       const byLev = {};
       filtered.forEach(p => { const key = p.leverancier?.bedrijfsnaam || "Onbekend"; if (!byLev[key]) byLev[key] = { naam: key, nr: p.leverancier?.leveranciernummer||"", planners:0, middelen:0, tarief:0 }; const mm = middelenPerPlanner[p.id] || []; byLev[key].planners++; byLev[key].middelen += mm.length; byLev[key].tarief += mm.reduce((s,m) => s + Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), 0); });
@@ -1141,10 +1152,9 @@ function PlannersPage({ toast, role }) {
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
         <StatCard label="Middelen" value={pm.length} delay={50} />
         <StatCard label="Totaal tarief" value={`€${fmt(tot)}`} delay={100} />
-        <StatCard label="Gem. voortgang" value={pm.length ? Math.round(pm.reduce((s, r) => s + r.voortgang, 0) / pm.length) + "%" : "—"} delay={150} />
       </div>
 
       {tablesOk === false && (
@@ -1172,7 +1182,6 @@ function PlannersPage({ toast, role }) {
   const toggleExpand = id => setExpanded(p => ({ ...p, [id]: !p[id] }));
   const getPmFor = pid => allPm.filter(x => x.planner_id === pid);
   const getTotTarief = pid => getPmFor(pid).reduce((s, r) => s + Number(r.gekozen_tarief || r.marketingmiddel?.tarief || 0), 0);
-  const getAvgV = pid => { const items = getPmFor(pid); return items.length ? Math.round(items.reduce((s, r) => s + r.voortgang, 0) / items.length) : 0; };
 
   return <div>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1200,7 +1209,7 @@ function PlannersPage({ toast, role }) {
       : filtered.length === 0 ? <Card><Empty text="Geen planners gevonden" /></Card>
       : <Card style={{ padding: 0 }}>
         <table>
-          <thead><tr><Th></Th><Th>Titel</Th><Th>Leverancier</Th><Th>Type</Th><Th>Status</Th><Th>Middelen</Th><Th>Tarief</Th><Th>Voortgang</Th><Th></Th></tr></thead>
+          <thead><tr><Th></Th><Th>Titel</Th><Th>Leverancier</Th><Th>Type</Th><Th>Status</Th><Th>Middelen</Th><Th>Tarief</Th><Th></Th></tr></thead>
           <tbody>
             {filtered.map(p => {
               const isOpen = expanded[p.id];
@@ -1216,7 +1225,6 @@ function PlannersPage({ toast, role }) {
                   <Td><Badge status={p.status} /></Td>
                   <Td mono>{counts[p.id] || 0}</Td>
                   <Td mono>€{fmt(getTotTarief(p.id))}</Td>
-                  <Td style={{ width: 130 }}><Progress value={getAvgV(p.id)} /></Td>
                   <Td style={{ width: 40 }}><Btn small onClick={() => setDetail(p)}>→</Btn></Td>
                 </tr>
                 {isOpen && (
@@ -1226,7 +1234,7 @@ function PlannersPage({ toast, role }) {
                         {pItems.length === 0
                           ? <div style={{ padding: "12px 44px", fontSize: 12, color: "var(--t3)" }}>Geen middelen gekoppeld</div>
                           : <table>
-                            <thead><tr>{["Middel", "Formaat", "Periode", "Deadline", "Tarief", "Status", "Voortgang"].map(h => <th key={h} style={{ textAlign: "left", padding: "6px 14px 6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>{h}</th>)}</tr></thead>
+                            <thead><tr>{["Middel", "Formaat", "Periode", "Deadline", "Tarief", "Status"].map(h => <th key={h} style={{ textAlign: "left", padding: "6px 14px 6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>{h}</th>)}</tr></thead>
                             <tbody>
                               {pItems.map((item, ii) => {
                                 const dlP = item.deadline && new Date(item.deadline) < new Date();
@@ -1237,7 +1245,6 @@ function PlannersPage({ toast, role }) {
                                   <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(item.deadline)}</span> : "—"}</td>
                                   <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.gekozen_tarief || item.marketingmiddel?.tarief || 0)}</td>
                                   <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
-                                  <td style={{ padding: "8px 14px", width: 120 }}><Progress value={item.voortgang} /></td>
                                 </tr>;
                               })}
                             </tbody>
