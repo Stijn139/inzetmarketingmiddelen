@@ -876,11 +876,11 @@ function PlannersPage({ toast, role }) {
         // Create a new record in Supabase for this middel
         const created = await db.post("marketingmiddel", {
           pakketnaam: midInfo.pakketnaam,
-          rubriek: midInfo.rubriek || null,
-          segment: midInfo.segment || null,
+          rubriek: midInfo.rubriek || "",
+          segment: midInfo.segment || "",
           tarief: midInfo.tarief || 0,
-          formaat: midInfo.formaat || null,
-          type_campagne: midInfo.rubriek || null
+          formaat: midInfo.formaat || "",
+          type_campagne: midInfo.rubriek || ""
         });
         midId = created[0].id;
       }
