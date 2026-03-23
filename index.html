@@ -256,9 +256,9 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
         <div style={{ width: 4, background: statusStyle.fg, flexShrink: 0 }} />
         <div style={{ flex: 1, padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>{row.marketingmiddel?.pakketnaam}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>{row.marketingmiddel?.pakketnaam}{row.gekozen_formaat && <span style={{ fontWeight: 500, color: "var(--bl)", marginLeft: 6 }}>({row.gekozen_formaat})</span>}</span>
             <Badge status={row.status} />
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>€{fmt(row.marketingmiddel?.tarief || 0)}</span>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>€{fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}</span>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             {period && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--t2)", background: "var(--s2)", borderRadius: 4, padding: "3px 8px", border: "1px solid var(--b)" }}>📅 {period}</span>}
@@ -302,7 +302,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
-                  {[["Status", <Badge status={row.status} />], ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Tarief", `€ ${fmt(row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"], ["Type campagne", row.marketingmiddel?.type_campagne || "—"]].map(([lbl, val]) => (
+                  {[["Status", <Badge status={row.status} />], ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
                     <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
                   ))}
                 </div>
@@ -859,17 +859,52 @@ function PlannersPage({ toast, role }) {
     } catch (e) { toast(e.message, "error"); }
   }
 
-  async function addMiddel(mid) {
+  async function addMiddel(midInfo) {
+    // midInfo = { pakketnaam, marketingmiddel, formaat, tarief, rubriek, segment }
     try {
-      if (pm.find(x => x.marketingmiddel_id === mid)) { toast("Al gekoppeld", "error"); return; }
-      const mdl = await db.get("marketingmiddel", { eq: { id: mid } });
-      const mm = mdl[0] || {};
-      await db.post("planner_marketingmiddel", { planner_id: detail.id, marketingmiddel_id: mid, status: "Gepland", startdatum: mm.startdatum || null, einddatum: mm.einddatum || null, deadline: mm.deadline || null });
-      const cs = await db.get("marketingmiddel_capaciteit", { eq: { marketingmiddel_id: mid } });
+      const key = midInfo.formaat ? midInfo.pakketnaam + ":" + midInfo.formaat : midInfo.pakketnaam;
+      if (pm.find(x => (x.gekozen_formaat ? x.marketingmiddel?.pakketnaam + ":" + x.gekozen_formaat : x.marketingmiddel?.pakketnaam) === key)) {
+        toast("Al gekoppeld", "error"); return;
+      }
+
+      // Find or create the marketingmiddel record in Supabase
+      let midId;
+      const existing = await db.get("marketingmiddel", { eq: { pakketnaam: midInfo.pakketnaam }, limit: 1 });
+      if (existing.length > 0) {
+        midId = existing[0].id;
+      } else {
+        // Create a new record in Supabase for this middel
+        const created = await db.post("marketingmiddel", {
+          pakketnaam: midInfo.pakketnaam,
+          rubriek: midInfo.rubriek || null,
+          segment: midInfo.segment || null,
+          tarief: midInfo.tarief || 0,
+          formaat: midInfo.formaat || null,
+          type_campagne: midInfo.rubriek || null
+        });
+        midId = created[0].id;
+      }
+
+      // Find the next deadline from the MIGRATION periodes
+      const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === midInfo.pakketnaam);
       const now = new Date().toISOString().slice(0, 10);
-      const cur = cs.find(c => c.periode_start <= now && c.periode_eind >= now) || cs[0];
-      if (cur) await db.patch("marketingmiddel_capaciteit", cur.id, { gereserveerd: cur.gereserveerd + 1 });
-      toast("Toegevoegd"); setSelModal(false); loadPm(detail.id);
+      const nextPeriode = migMiddel?.periodes
+        ?.filter(p => p.deadline_leverancier && p.deadline_leverancier >= now)
+        ?.sort((a, b) => a.deadline_leverancier.localeCompare(b.deadline_leverancier))[0];
+
+      await db.post("planner_marketingmiddel", {
+        planner_id: detail.id,
+        marketingmiddel_id: midId,
+        status: "Gepland",
+        gekozen_formaat: midInfo.formaat || null,
+        gekozen_tarief: midInfo.tarief || null,
+        startdatum: nextPeriode?.publicatiedatum || null,
+        einddatum: null,
+        deadline: nextPeriode?.deadline_leverancier || null
+      });
+
+      toast(`${midInfo.pakketnaam}${midInfo.formaat ? ` (${midInfo.formaat})` : ""} toegevoegd`);
+      setSelModal(false); loadPm(detail.id);
     } catch (e) { toast(e.message, "error"); }
   }
 
@@ -914,14 +949,14 @@ function PlannersPage({ toast, role }) {
       const XLSX = window.XLSX;
       const wb = XLSX.utils.book_new();
       const h1 = ["Planner titel","Leverancier","Leveranciernummer","Type","Status","Aantal middelen","Totaal tarief (EUR)","Gem. voortgang (%)"];
-      const r1 = filtered.map(p => { const mm = middelenPerPlanner[p.id] || []; return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0]; });
+      const r1 = filtered.map(p => { const mm = middelenPerPlanner[p.id] || []; return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0]; });
       const ws1 = XLSX.utils.aoa_to_sheet([h1, ...r1]); ws1["!cols"] = [32,24,18,16,14,16,20,16].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws1, "Planners");
-      const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Rubriek","Segment","Type campagne","Formaat","Tarief (EUR)","Status middel","Voortgang (%)","Startdatum","Einddatum","Deadline"];
+      const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Formaat","Rubriek","Segment","Tarief (EUR)","Status middel","Voortgang (%)","Startdatum","Deadline"];
       const r2 = [];
-      filtered.forEach(p => { const mm = middelenPerPlanner[p.id] || []; if (mm.length === 0) { r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","","","",""]); } else { mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", m.marketingmiddel?.type_campagne||"", m.marketingmiddel?.formaat||"", Number(m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.einddatum||"", m.deadline||""])); } });
-      const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]); ws2["!cols"] = [28,22,18,14,14,36,16,14,16,14,14,16,14,14,14,14].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
+      filtered.forEach(p => { const mm = middelenPerPlanner[p.id] || []; if (mm.length === 0) { r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","",""]); } else { mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.gekozen_formaat||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.deadline||""])); } });
+      const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]); ws2["!cols"] = [28,22,18,14,14,36,14,16,14,14,16,14,14,14].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
       const byLev = {};
-      filtered.forEach(p => { const key = p.leverancier?.bedrijfsnaam || "Onbekend"; if (!byLev[key]) byLev[key] = { naam: key, nr: p.leverancier?.leveranciernummer||"", planners:0, middelen:0, tarief:0 }; const mm = middelenPerPlanner[p.id] || []; byLev[key].planners++; byLev[key].middelen += mm.length; byLev[key].tarief += mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0); });
+      filtered.forEach(p => { const key = p.leverancier?.bedrijfsnaam || "Onbekend"; if (!byLev[key]) byLev[key] = { naam: key, nr: p.leverancier?.leveranciernummer||"", planners:0, middelen:0, tarief:0 }; const mm = middelenPerPlanner[p.id] || []; byLev[key].planners++; byLev[key].middelen += mm.length; byLev[key].tarief += mm.reduce((s,m) => s + Number(m.gekozen_tarief||m.marketingmiddel?.tarief||0), 0); });
       const h3 = ["Leverancier","Leveranciernummer","Aantal planners","Totaal middelen","Totaal tarief (EUR)"];
       const r3 = Object.values(byLev).sort((a,b)=>b.tarief-a.tarief).map(l=>[l.naam,l.nr,l.planners,l.middelen,l.tarief]);
       const ws3 = XLSX.utils.aoa_to_sheet([h3, ...r3]); ws3["!cols"] = [28,18,16,16,20].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws3, "Per leverancier");
@@ -933,7 +968,7 @@ function PlannersPage({ toast, role }) {
 
   if (detail) {
     const locked = detail.status === "Afgerond" || detail.status === "Geannuleerd";
-    const tot = pm.reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
+    const tot = pm.reduce((s, r) => s + Number(r.gekozen_tarief || r.marketingmiddel?.tarief || 0), 0);
     return <div>
       <button onClick={() => { setDetail(null); load(); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug</button>
       <Card style={{ padding: 28, marginBottom: 20 }}>
@@ -981,13 +1016,13 @@ function PlannersPage({ toast, role }) {
           ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
           : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>}
       </Card>
-      {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.marketingmiddel_id)} toast={toast} />}
+      {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.gekozen_formaat ? r.marketingmiddel?.pakketnaam + ":" + r.gekozen_formaat : r.marketingmiddel?.pakketnaam)} toast={toast} />}
     </div>;
   }
 
   const toggleExpand = id => setExpanded(p => ({ ...p, [id]: !p[id] }));
   const getPmFor = pid => allPm.filter(x => x.planner_id === pid);
-  const getTotTarief = pid => getPmFor(pid).reduce((s, r) => s + Number(r.marketingmiddel?.tarief || 0), 0);
+  const getTotTarief = pid => getPmFor(pid).reduce((s, r) => s + Number(r.gekozen_tarief || r.marketingmiddel?.tarief || 0), 0);
   const getAvgV = pid => { const items = getPmFor(pid); return items.length ? Math.round(items.reduce((s, r) => s + r.voortgang, 0) / items.length) : 0; };
 
   return <div>
@@ -1042,15 +1077,16 @@ function PlannersPage({ toast, role }) {
                         {pItems.length === 0
                           ? <div style={{ padding: "12px 44px", fontSize: 12, color: "var(--t3)" }}>Geen middelen gekoppeld</div>
                           : <table>
-                            <thead><tr>{["Middel", "Periode", "Deadline", "Tarief", "Status", "Voortgang"].map(h => <th key={h} style={{ textAlign: "left", padding: "6px 14px 6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>{h}</th>)}</tr></thead>
+                            <thead><tr>{["Middel", "Formaat", "Periode", "Deadline", "Tarief", "Status", "Voortgang"].map(h => <th key={h} style={{ textAlign: "left", padding: "6px 14px 6px 14px", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--t3)", borderBottom: "1px solid var(--b)" }}>{h}</th>)}</tr></thead>
                             <tbody>
                               {pItems.map((item, ii) => {
                                 const dlP = item.deadline && new Date(item.deadline) < new Date();
                                 return <tr key={item.id} style={{ borderBottom: ii < pItems.length - 1 ? "1px solid var(--b)" : "none" }}>
                                   <td style={{ padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>{item.marketingmiddel?.pakketnaam}</td>
-                                  <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? fmtPeriod(item.startdatum, item.einddatum) : "—"}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, color: item.gekozen_formaat ? "var(--bl)" : "var(--t3)", fontWeight: item.gekozen_formaat ? 600 : 400 }}>{item.gekozen_formaat || "—"}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? fmtPeriod(item.startdatum, item.einddatum) : item.startdatum ? fmtD(item.startdatum) : "—"}</td>
                                   <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(item.deadline)}</span> : "—"}</td>
-                                  <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.marketingmiddel?.tarief || 0)}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.gekozen_tarief || item.marketingmiddel?.tarief || 0)}</td>
                                   <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
                                   <td style={{ padding: "8px 14px", width: 120 }}><Progress value={item.voortgang} /></td>
                                 </tr>;
@@ -1096,42 +1132,109 @@ function PlannerForm({ levs, onSave, onClose }) {
 }
 
 function SelModal({ onSelect, onClose, existing, toast }) {
-  const [items, setItems] = useState([]);
-  const [caps, setCaps] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [f, setF] = useState({});
-  useEffect(() => {
-    (async () => {
-      try { const [m, c] = await Promise.all([db.get("marketingmiddel", { order: "pakketnaam.asc" }), db.get("marketingmiddel_capaciteit")]); setItems(m); setCaps(c); }
-      catch (e) { toast(e.message, "error"); }
-      setLoading(false);
-    })();
-  }, [toast]);
-  const rubs = [...new Set(items.map(m => m.rubriek))];
-  const segs = [...new Set(items.map(m => m.segment))];
-  const fl = items.filter(m => { if (f.rubriek && m.rubriek !== f.rubriek) return false; if (f.segment && m.segment !== f.segment) return false; return true; });
-  return <Modal title="Middel selecteren" onClose={onClose} wide>
-    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "rubriek", placeholder: "Alle rubrieken", opts: rubs }, { key: "segment", placeholder: "Alle segmenten", opts: segs }]} />
-    {loading ? <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>Laden...</div>
-      : <div style={{ maxHeight: 420, overflow: "auto", borderRadius: "var(--rdx)", border: "1px solid var(--b)" }}>
-        {fl.map((m, i) => {
-          const c = getCap(caps, m.id);
-          const av = c.total - c.used;
-          const lk = existing.includes(m.id);
-          const vol = av <= 0;
-          return <div key={m.id} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < fl.length - 1 ? "1px solid var(--b)" : "none", opacity: lk ? 0.4 : 1, gap: 14 }}>
+  const [selMiddel, setSelMiddel] = useState(null); // for formaat step
+
+  const items = MIGRATION.middelen;
+  const allMM = [...new Set(items.map(m => m.marketingmiddel))].sort();
+  const rubs = [...new Set(items.map(m => m.rubriek).filter(Boolean))];
+  const segs = [...new Set(items.map(m => m.segment).filter(Boolean))];
+
+  const fl = items.filter(m => {
+    if (f.marketingmiddel && m.marketingmiddel !== f.marketingmiddel) return false;
+    if (f.rubriek && m.rubriek !== f.rubriek) return false;
+    if (f.segment && m.segment !== f.segment) return false;
+    return true;
+  });
+
+  // Check if a pakketnaam is already linked (by name, since we use in-memory ids)
+  const isLinked = (pn) => existing.some(e => e === pn);
+
+  function selectMiddel(m) {
+    if (m.formaten.length > 0) {
+      setSelMiddel(m); // show formaat picker
+    } else {
+      // No formaten → direct select with basistarief
+      onSelect({ pakketnaam: m.pakketnaam, marketingmiddel: m.marketingmiddel, formaat: null, tarief: m.basistarief, rubriek: m.rubriek, segment: m.segment });
+    }
+  }
+
+  function selectFormaat(m, f) {
+    onSelect({ pakketnaam: m.pakketnaam, marketingmiddel: m.marketingmiddel, formaat: f.formaat, tarief: f.tarief, rubriek: m.rubriek, segment: m.segment });
+  }
+
+  // ── FORMAAT PICKER (step 2) ──
+  if (selMiddel) {
+    return <Modal title="Formaat kiezen" onClose={() => setSelMiddel(null)} wide>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{selMiddel.marketingmiddel}</div>
+        <div style={{ fontSize: 17, fontWeight: 700 }}>{selMiddel.pakketnaam}</div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+          {selMiddel.rubriek && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{selMiddel.rubriek}</span>}
+          {selMiddel.segment && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{selMiddel.segment}</span>}
+        </div>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t3)", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>Kies een formaat</div>
+      <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", overflow: "hidden" }}>
+        {selMiddel.formaten.map((f, i) => {
+          const lk = isLinked(selMiddel.pakketnaam + ":" + f.formaat);
+          return <div key={i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < selMiddel.formaten.length - 1 ? "1px solid var(--b)" : "none", gap: 14, opacity: lk ? 0.4 : 1 }}
+            onMouseEnter={e => { if (!lk) e.currentTarget.style.background = "var(--tug)"; }}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.pakketnaam}{lk && <span style={{ fontSize: 11, color: "var(--t3)" }}> (gekoppeld)</span>}</div>
-              <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>{m.rubriek} · {m.segment} · €{fmt(m.tarief)}</div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{f.formaat}</span>
             </div>
-            <div style={{ width: 120 }}><CapBar used={c.used} total={c.total} /></div>
-            <Btn small primary={!lk && !vol} disabled={lk} style={vol && !lk ? { background: "var(--a)", color: "#fff" } : {}}
-              onClick={() => { if (vol && !confirm("Geen capaciteit! Toch toevoegen?")) return; onSelect(m.id); }}>
-              {lk ? "Gekoppeld" : vol ? "Vol → toevoegen" : "Toevoegen"}
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 600, color: "var(--t)" }}>€{fmt(f.tarief)}</span>
+            <Btn small primary={!lk} disabled={lk} onClick={() => selectFormaat(selMiddel, f)}>
+              {lk ? "Gekoppeld" : "Selecteren"}
             </Btn>
           </div>;
         })}
-      </div>}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 16 }}>
+        <Btn small onClick={() => setSelMiddel(null)}>← Terug naar overzicht</Btn>
+      </div>
+    </Modal>;
+  }
+
+  // ── MIDDEL PICKER (step 1) ──
+  return <Modal title="Middel selecteren" onClose={onClose} wide>
+    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[
+      { key: "marketingmiddel", placeholder: "Alle marketingmiddelen", opts: allMM },
+      { key: "rubriek", placeholder: "Alle rubrieken", opts: rubs },
+      { key: "segment", placeholder: "Alle segmenten", opts: segs }
+    ]} />
+    <div style={{ maxHeight: 420, overflow: "auto", borderRadius: "var(--rdx)", border: "1px solid var(--b)" }}>
+      {fl.length === 0 && <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>Geen middelen gevonden</div>}
+      {fl.map((m, i) => {
+        const hasFormaten = m.formaten.length > 0;
+        const tarief = hasFormaten
+          ? `€${fmt(Math.min(...m.formaten.map(f => f.tarief)))} – €${fmt(Math.max(...m.formaten.map(f => f.tarief)))}`
+          : m.basistarief != null ? `€${fmt(m.basistarief)}` : "—";
+        const lk = !hasFormaten && isLinked(m.pakketnaam);
+        return <div key={m._id || i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < fl.length - 1 ? "1px solid var(--b)" : "none", opacity: lk ? 0.4 : 1, gap: 14 }}
+          onMouseEnter={e => { if (!lk) e.currentTarget.style.background = "var(--tug)"; }}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>
+              {m.pakketnaam}
+              {lk && <span style={{ fontSize: 11, color: "var(--t3)" }}> (gekoppeld)</span>}
+              {hasFormaten && <span style={{ fontSize: 11, color: "var(--bl)", fontWeight: 500, marginLeft: 6 }}>{m.formaten.length} formaten</span>}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>
+              {m.marketingmiddel} · {m.segment || "—"} · {tarief}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {m.doorbelasting && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "var(--tul)", color: "var(--tu2)", fontWeight: 700 }}>DB</span>}
+            <Btn small primary={!lk} disabled={lk}
+              onClick={() => { if (!lk) selectMiddel(m); }}>
+              {lk ? "Gekoppeld" : hasFormaten ? "Kies formaat →" : "Toevoegen"}
+            </Btn>
+          </div>
+        </div>;
+      })}
+    </div>
   </Modal>;
 }
 
