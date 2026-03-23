@@ -238,10 +238,6 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
     } catch { toast("Tabel 'planner_middel_notities' bestaat nog niet — zie SQL tip", "error"); }
     setSaving(false);
   }
-  async function saveEdit() {
-    await onUpdate(row, d);
-    setEditMode(false);
-  }
 
   return (
     <div style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
@@ -277,32 +273,34 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
             ))}
             <div style={{ flex: 1 }} />
             {!locked && (
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                <Btn small onClick={() => { setEditMode(e => !e); setTab("details"); }}>{editMode ? "Annuleren" : "✎ Bewerken"}</Btn>
-                <Btn small danger onClick={() => onRemove(row)}>Verwijderen</Btn>
+              <div style={{ display: "flex", alignItems: "center" }} onClick={e => e.stopPropagation()}>
+                <Btn small ghost onClick={() => onRemove(row)} style={{ color: "var(--r)", fontSize: 11, padding: "4px 8px" }}>verwijderen</Btn>
               </div>
             )}
           </div>
 
           {tab === "details" && (
             <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
-              {editMode ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
+                {/* Status: direct dropdown when not locked, badge when locked */}
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0 16px", maxWidth: 280 }}>
-                    <Field label="Status"><select value={d.status} onChange={e => setD(p => ({ ...p, status: e.target.value }))}>{["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s}>{s}</option>)}</select></Field>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                    <Btn small onClick={() => setEditMode(false)}>Annuleren</Btn>
-                    <Btn small primary onClick={saveEdit}>Opslaan</Btn>
-                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>Status</div>
+                  {locked ? <Badge status={row.status} /> : (
+                    <select value={row.status} onChange={e => { e.stopPropagation(); onUpdate(row, { status: e.target.value }); }}
+                      style={{ padding: "5px 30px 5px 10px", fontSize: 13, fontWeight: 600, borderRadius: 6,
+                        color: (stm[row.status] || {}).fg || "var(--t2)",
+                        borderColor: (stm[row.status] || {}).fg || "var(--b)",
+                        background: (stm[row.status] || {}).bg || "var(--s2)",
+                        width: "auto", minWidth: 130
+                      }}>
+                      {["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
                 </div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
-                  {[["Status", <Badge status={row.status} />], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
-                    <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
-                  ))}
-                </div>
-              )}
+                {[["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
+                  <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
+                ))}
+              </div>
             </div>
           )}
 
