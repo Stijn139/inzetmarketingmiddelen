@@ -196,7 +196,7 @@ function fmtTs(ts) {
 function isOverdue(d) { return d && new Date(d) < new Date(); }
 
 // ============================================================
-// PmRow — redesigned with expand panel, tabs, notes, history
+// PmRow
 // ============================================================
 function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   const [open, setOpen] = useState(false);
@@ -247,106 +247,53 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
 
   return (
     <div style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
-
-      {/* ── COLLAPSED ROW ── */}
       <div
         onClick={() => setOpen(o => !o)}
         style={{ display: "flex", alignItems: "stretch", cursor: "pointer", transition: "background .1s", background: open ? "var(--tug)" : "transparent" }}
         onMouseEnter={e => { if (!open) e.currentTarget.style.background = "var(--tug)"; }}
         onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
       >
-        {/* Status colour stripe */}
         <div style={{ width: 4, background: statusStyle.fg, flexShrink: 0 }} />
-
         <div style={{ flex: 1, padding: "14px 16px" }}>
-          {/* Row 1: name + status badge + tarief */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>
-              {row.marketingmiddel?.pakketnaam}
-            </span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>{row.marketingmiddel?.pakketnaam}</span>
             <Badge status={row.status} />
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>
-              €{fmt(row.marketingmiddel?.tarief || 0)}
-            </span>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>€{fmt(row.marketingmiddel?.tarief || 0)}</span>
           </div>
-
-          {/* Row 2: date chips */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-            {period && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--t2)", background: "var(--s2)", borderRadius: 4, padding: "3px 8px", border: "1px solid var(--b)" }}>
-                📅 {period}
-              </span>
-            )}
-            {deadline && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
-                color: overdue ? "var(--r)" : "var(--a)",
-                background: overdue ? "var(--rb)" : "var(--ab)",
-                border: `1px solid ${overdue ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`,
-                borderRadius: 4, padding: "3px 8px"
-              }}>
-                {overdue ? "⚠️ Verlopen:" : "⏱ Deadline:"} {deadline}
-              </span>
-            )}
-            {notes.length > 0 && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--t3)", background: "var(--s2)", borderRadius: 4, padding: "3px 7px", border: "1px solid var(--b)" }}>
-                💬 {notes.length}
-              </span>
-            )}
+            {period && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--t2)", background: "var(--s2)", borderRadius: 4, padding: "3px 8px", border: "1px solid var(--b)" }}>📅 {period}</span>}
+            {deadline && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: overdue ? "var(--r)" : "var(--a)", background: overdue ? "var(--rb)" : "var(--ab)", border: `1px solid ${overdue ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`, borderRadius: 4, padding: "3px 8px" }}>{overdue ? "⚠️ Verlopen:" : "⏱ Deadline:"} {deadline}</span>}
+            {notes.length > 0 && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--t3)", background: "var(--s2)", borderRadius: 4, padding: "3px 7px", border: "1px solid var(--b)" }}>💬 {notes.length}</span>}
           </div>
-
-          {/* Row 3: progress bar */}
-          <div style={{ maxWidth: 260 }}>
-            <Progress value={row.voortgang} />
-          </div>
+          <div style={{ maxWidth: 260 }}><Progress value={row.voortgang} /></div>
         </div>
-
-        {/* Expand chevron */}
         <div style={{ display: "flex", alignItems: "center", padding: "0 14px", color: "var(--t3)", flexShrink: 0 }}>
           <span style={{ transform: open ? "rotate(90deg)" : "rotate(0)", transition: "transform .2s", display: "block", fontSize: 20 }}>›</span>
         </div>
       </div>
 
-      {/* ── EXPANDED PANEL ── */}
       {open && (
         <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
-
-          {/* Tab navigation */}
           <div style={{ display: "flex", background: "var(--s)", borderBottom: "1px solid var(--b)", padding: "0 20px" }}>
             {[["details", "Details"], ["notes", `Opmerkingen${notes.length ? ` (${notes.length})` : ""}`], ["history", `Historie${history.length ? ` (${history.length})` : ""}`]].map(([id, label]) => (
-              <button key={id} onClick={e => { e.stopPropagation(); setTab(id); }} style={{
-                padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer",
-                fontSize: 13, fontWeight: tab === id ? 700 : 400,
-                color: tab === id ? "var(--tu)" : "var(--t3)",
-                borderBottom: `2px solid ${tab === id ? "var(--tu)" : "transparent"}`,
-                transition: "all .15s", marginBottom: -1
-              }}>{label}</button>
+              <button key={id} onClick={e => { e.stopPropagation(); setTab(id); }} style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: tab === id ? 700 : 400, color: tab === id ? "var(--tu)" : "var(--t3)", borderBottom: `2px solid ${tab === id ? "var(--tu)" : "transparent"}`, transition: "all .15s", marginBottom: -1 }}>{label}</button>
             ))}
             <div style={{ flex: 1 }} />
             {!locked && (
               <div style={{ display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                <Btn small onClick={() => { setEditMode(e => !e); setTab("details"); }}>
-                  {editMode ? "Annuleren" : "✎ Bewerken"}
-                </Btn>
+                <Btn small onClick={() => { setEditMode(e => !e); setTab("details"); }}>{editMode ? "Annuleren" : "✎ Bewerken"}</Btn>
                 <Btn small danger onClick={() => onRemove(row)}>Verwijderen</Btn>
               </div>
             )}
           </div>
 
-          {/* DETAILS TAB */}
           {tab === "details" && (
             <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
               {editMode ? (
                 <div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-                    <Field label="Voortgang (%)">
-                      <input type="number" min="0" max="100" value={d.voortgang}
-                        onChange={e => setD(p => ({ ...p, voortgang: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} />
-                    </Field>
-                    <Field label="Status">
-                      <select value={d.status} onChange={e => setD(p => ({ ...p, status: e.target.value }))}>
-                        {["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </Field>
+                    <Field label="Voortgang (%)"><input type="number" min="0" max="100" value={d.voortgang} onChange={e => setD(p => ({ ...p, voortgang: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} /></Field>
+                    <Field label="Status"><select value={d.status} onChange={e => setD(p => ({ ...p, status: e.target.value }))}>{["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s}>{s}</option>)}</select></Field>
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <Btn small onClick={() => setEditMode(false)}>Annuleren</Btn>
@@ -355,43 +302,21 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
-                  {[
-                    ["Status", <Badge status={row.status} />],
-                    ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>],
-                    ["Periode", period || "—"],
-                    ["Deadline", deadline
-                      ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span>
-                      : "—"],
-                    ["Tarief", `€ ${fmt(row.marketingmiddel?.tarief || 0)}`],
-                    ["Rubriek", row.marketingmiddel?.rubriek || "—"],
-                    ["Segment", row.marketingmiddel?.segment || "—"],
-                    ["Type campagne", row.marketingmiddel?.type_campagne || "—"],
-                  ].map(([lbl, val]) => (
-                    <div key={lbl}>
-                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div>
-                      <div style={{ fontSize: 13 }}>{val}</div>
-                    </div>
+                  {[["Status", <Badge status={row.status} />], ["Voortgang", <div style={{ marginTop: 4, width: 120 }}><Progress value={row.voortgang} /></div>], ["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Tarief", `€ ${fmt(row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"], ["Type campagne", row.marketingmiddel?.type_campagne || "—"]].map(([lbl, val]) => (
+                    <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* NOTES TAB */}
           {tab === "notes" && (
             <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
               {!locked && (
                 <div style={{ marginBottom: 16 }}>
-                  <textarea
-                    placeholder="Voeg een opmerking toe... (Ctrl+Enter om op te slaan)"
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) addNote(); }}
-                  />
+                  <textarea placeholder="Voeg een opmerking toe... (Ctrl+Enter om op te slaan)" value={noteText} onChange={e => setNoteText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) addNote(); }} />
                   <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                    <Btn small primary disabled={!noteText.trim() || saving} onClick={addNote}>
-                      {saving ? "Opslaan..." : "💬 Opmerking plaatsen"}
-                    </Btn>
+                    <Btn small primary disabled={!noteText.trim() || saving} onClick={addNote}>{saving ? "Opslaan..." : "💬 Opmerking plaatsen"}</Btn>
                   </div>
                 </div>
               )}
@@ -407,12 +332,10 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
                       <p style={{ fontSize: 13, color: "var(--t)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{n.tekst}</p>
                     </div>
                   ))}
-                </div>
-              }
+                </div>}
             </div>
           )}
 
-          {/* HISTORY TAB */}
           {tab === "history" && (
             <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
               {history.length === 0
@@ -436,8 +359,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
                       </div>
                     </div>
                   ))}
-                </div>
-              }
+                </div>}
             </div>
           )}
         </div>
@@ -446,191 +368,389 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   );
 }
 
+
 // ============================================================
-// MIDDELEN PAGE — Marketing = schrijfrechten, Inkoop = read-only
+// MIGRATION DATA (from Tarieven_tab.xlsx + Timing_Inzet_Marketingmiddelen.xlsx)
 // ============================================================
-function MiddelenPage({ toast, role }) {
-  const [items, setItems] = useState([]);
-  const [caps, setCaps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [capModal, setCapModal] = useState(null);
-  const [f, setF] = useState({});
-  const isInkoop = role === "inkoop";
+const MIGRATION = {"middelen":[{"marketingmiddel":"Technoscoop nieuwsbrief","pakketnaam":"Technoscoop nieuwsbrief","rubriek":"Introductie /  Assortiment","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":975.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-23","deadline_leverancier":"2026-03-19"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-21","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-18","deadline_leverancier":"2026-05-07"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-17","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-15","deadline_leverancier":"2026-09-10"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-12","deadline_leverancier":"2026-10-08"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-21","deadline_leverancier":"2026-12-10"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-18","deadline_leverancier":"2027-01-14"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-18","deadline_leverancier":"2027-02-11"}]},{"marketingmiddel":"Technoscoop magazine","pakketnaam":"Technoscoop magazine","rubriek":"Introductie /  Assortiment","segment":"Alle klanten van TU","doorbelasting":false,"basistarief":null,"formaten":[{"formaat":"1/2","tarief":1130.0},{"formaat":"1/1","tarief":2255.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-19"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-19"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-23"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-28"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-09"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-20"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-24"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-12"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-10"}]},{"marketingmiddel":"Industrie en Technische dienst","pakketnaam":"Nieuwsbrief Industrie","rubriek":"Introductie /  Assortiment","segment":"Industrie","doorbelasting":true,"basistarief":975.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-28","deadline_leverancier":"2026-03-03"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-04-07"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-24","deadline_leverancier":"2026-04-28"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-25","deadline_leverancier":"2026-08-18"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-09-01"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-26","deadline_leverancier":"2026-09-29"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-12-12"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-27","deadline_leverancier":"2027-01-08"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-27","deadline_leverancier":"2027-02-08"}]},{"marketingmiddel":"Industrie en Technische dienst","pakketnaam":"Nieuwsbrief Technische dienst","rubriek":"Introductie /  Assortiment","segment":"Technische dienst","doorbelasting":true,"basistarief":975.0,"formaten":[],"periodes":[{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-12","deadline_leverancier":"2027-01-07"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-03","deadline_leverancier":"2026-03-27"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-09","deadline_leverancier":"2026-07-04"}]},{"marketingmiddel":"Industrie en Technische dienst","pakketnaam":"Themacampagne - Energie monitoring en besparing","rubriek":"Thema: inspelen op actualiteiten","segment":"Industrie","doorbelasting":true,"basistarief":1900.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april-maart","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-24"}]},{"marketingmiddel":"Industrie en Technische dienst","pakketnaam":"Themacampagne - Slim, efficient en veilig produceren","rubriek":"Thema: inspelen op actualiteiten","segment":"Industrie","doorbelasting":true,"basistarief":1900.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"september-december","publicatiedatum":"2026-09-15","deadline_leverancier":"2026-05-27"}]},{"marketingmiddel":"Inspiratiecentra & TU Boot","pakketnaam":"Smart Building - Utrecht","rubriek":"Thema: inspelen op actualiteiten","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":false,"basistarief":3892.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"April","publicatiedatum":null,"deadline_leverancier":null}]},{"marketingmiddel":"Inspiratiecentra & TU Boot","pakketnaam":"Smart Industry - Eindhoven","rubriek":"Thema: inspelen op actualiteiten","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":false,"basistarief":5685.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"April","publicatiedatum":null,"deadline_leverancier":null}]},{"marketingmiddel":"Inspiratiecentra & TU Boot","pakketnaam":"TU Boot expositieplek","rubriek":"Thema: inspelen op actualiteiten","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":false,"basistarief":20250.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"oktober-november","publicatiedatum":null,"deadline_leverancier":null}]},{"marketingmiddel":"Online Bewustwording","pakketnaam":"Bewustwording Goud (social & display)","rubriek":"Introductie /  Assortiment","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":true,"basistarief":5275.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-02-26"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-01","deadline_leverancier":"2026-03-26"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-01","deadline_leverancier":"2026-04-23"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-07-23"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-08-20"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-01","deadline_leverancier":"2026-09-18"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-01","deadline_leverancier":"2026-11-19"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-01","deadline_leverancier":"2026-12-18"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-01","deadline_leverancier":"2027-01-21"}]},{"marketingmiddel":"Online Bewustwording","pakketnaam":"Bewustwording Zilver (social)","rubriek":"Introductie /  Assortiment","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":true,"basistarief":2665.0,"formaten":[],"periodes":[]},{"marketingmiddel":"Online marketing","pakketnaam":"Technoscoop-nieuwsbrief Lokale installateur en/of Middelgroot/groot","rubriek":"Introductie /  Assortiment","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":true,"basistarief":975.0,"formaten":[],"periodes":[]},{"marketingmiddel":"Online marketing","pakketnaam":"SEA productcategorie Goud","rubriek":"Assortiment / Conversie","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":true,"basistarief":5120.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-02-26"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-01","deadline_leverancier":"2026-03-26"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-01","deadline_leverancier":"2026-04-23"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-07-23"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-08-20"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-01","deadline_leverancier":"2026-09-18"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-01","deadline_leverancier":"2026-11-19"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-01","deadline_leverancier":"2026-12-18"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-01","deadline_leverancier":"2027-01-21"}]},{"marketingmiddel":"Online marketing","pakketnaam":"SEA productcategorie Zilver","rubriek":"Assortiment / Conversie","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":true,"basistarief":2560.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-02-26"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-01","deadline_leverancier":"2026-03-26"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-01","deadline_leverancier":"2026-04-23"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-07-23"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-08-20"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-01","deadline_leverancier":"2026-09-18"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-01","deadline_leverancier":"2026-11-19"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-01","deadline_leverancier":"2026-12-18"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-01","deadline_leverancier":"2027-01-21"}]},{"marketingmiddel":"Online marketing","pakketnaam":"Thuiscomfort","rubriek":"Introductie /  Assortiment","segment":"Consumenten","doorbelasting":false,"basistarief":1075.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-02-26"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-01","deadline_leverancier":"2026-03-26"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-01","deadline_leverancier":"2026-04-23"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-07-23"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-08-20"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-01","deadline_leverancier":"2026-09-18"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-01","deadline_leverancier":"2026-11-19"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-01","deadline_leverancier":"2026-12-18"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-01","deadline_leverancier":"2027-01-21"}]},{"marketingmiddel":"SanitairID","pakketnaam":"SanitairID pakket (print + nieuwsbrief)","rubriek":"Introductie","segment":"Showroomhouders, interieurarchitecten, stylisten en installateurs","doorbelasting":true,"basistarief":4250.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-15","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"SanitairID","pakketnaam":"SanitairID print","rubriek":"Introductie","segment":"Showroomhouders, interieurarchitecten, stylisten en installateurs","doorbelasting":false,"basistarief":3430.0,"formaten":[],"periodes":[]},{"marketingmiddel":"Select","pakketnaam":"Select pakket 1 (print + nieuwsbrief)","rubriek":"Actie","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":null,"formaten":[{"formaat":"spread","tarief":4300.0},{"formaat":"1/8","tarief":635.0},{"formaat":"1/4","tarief":900.0},{"formaat":"1/2","tarief":1385.0},{"formaat":"1/1","tarief":2355.0},{"formaat":"achterpagina","tarief":3025.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Select","pakketnaam":"Select pakket 2 (print + narrowcasting)","rubriek":"Actie","segment":"Alle klanten van TU","doorbelasting":false,"basistarief":null,"formaten":[{"formaat":"spread","tarief":4560.0},{"formaat":"1/8","tarief":900.0},{"formaat":"1/4","tarief":1100.0},{"formaat":"1/2","tarief":1590.0},{"formaat":"1/1","tarief":2600.0},{"formaat":"achterpagina","tarief":3280.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Select","pakketnaam":"Select pakket 3 (print + nieuwsbrief + narrowcasting)","rubriek":"Actie","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":null,"formaten":[{"formaat":"spread","tarief":4915.0},{"formaat":"1/8","tarief":1280.0},{"formaat":"1/4","tarief":1540.0},{"formaat":"1/2","tarief":2000.0},{"formaat":"1/1","tarief":3075.0},{"formaat":"achterpagina","tarief":3635.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Select","pakketnaam":"Select print","rubriek":"Actie","segment":"Alle klanten van TU","doorbelasting":false,"basistarief":null,"formaten":[{"formaat":"spread","tarief":3895.0},{"formaat":"1/8","tarief":285.0},{"formaat":"1/4","tarief":490.0},{"formaat":"1/2","tarief":975.0},{"formaat":"1/1","tarief":1950.0},{"formaat":"achterpagina","tarief":2665.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU Campagnes - Cadeauweken","rubriek":"Actie","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":false,"basistarief":515.0,"formaten":[],"periodes":[]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Renovatie","rubriek":"Actie","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":false,"basistarief":515.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"september-oktober","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-06-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - spaarTUmee E-installateur","rubriek":"Actie / Sparen","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":false,"basistarief":null,"formaten":[],"periodes":[{"jaar":2026,"maand":"heel jaar","publicatiedatum":"2026-01-01","deadline_leverancier":null}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - spaarTUmee W-installateur","rubriek":"Actie / Sparen","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":false,"basistarief":null,"formaten":[],"periodes":[{"jaar":2026,"maand":"heel jaar","publicatiedatum":"2026-01-01","deadline_leverancier":null}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Slim werken","rubriek":"Thema: inspelen op actualiteiten","segment":"Middelgroot/groot","doorbelasting":false,"basistarief":2050.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"oktober-december","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Duurzaam ondernemen - Actueel thema ntb","rubriek":"Thema: inspelen op actualiteiten","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":2050.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"september-december","publicatiedatum":"2026-09-01","deadline_leverancier":"2026-06-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Duurzaam ondernemen - Energiemanagement en connectiviteit","rubriek":"Thema: inspelen op actualiteiten","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":2050.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april-juni","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Innovatiecampagne","rubriek":"Thema: inspelen op actualiteiten en trends","segment":"Alle klanten van TU","doorbelasting":true,"basistarief":4765.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-01","deadline_leverancier":"2026-08-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Licht","rubriek":"Thema: inspelen op actualiteiten","segment":"Lokale installateurs / Middelgroot/groot / Industrie","doorbelasting":true,"basistarief":2000.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - TU Roadtrip","rubriek":"Thema: inspelen op actualiteiten en trends","segment":"Lokale installateurs / Middelgroot/groot","doorbelasting":false,"basistarief":6118.4,"formaten":[],"periodes":[{"jaar":2026,"maand":"mei-juni","publicatiedatum":"2026-05-01","deadline_leverancier":"2026-02-15"}]},{"marketingmiddel":"Toppers","pakketnaam":"Multichannel conversie","rubriek":"Actie","segment":"Lokale installateurs","doorbelasting":true,"basistarief":14850.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Toppers","pakketnaam":"Toppers en kopstelling Servicecentrum","rubriek":"Actie","segment":"Lokale installateurs","doorbelasting":false,"basistarief":7225.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Toppers","pakketnaam":"Toppers print","rubriek":"Actie","segment":"Lokale installateurs","doorbelasting":false,"basistarief":null,"formaten":[{"formaat":"1/1","tarief":2100.0},{"formaat":"1/4","tarief":590.0},{"formaat":"1/2","tarief":1075.0}],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-22"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-04-29","deadline_leverancier":"2026-02-12"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-05-27","deadline_leverancier":"2026-03-12"},{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-04-16"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-08-26","deadline_leverancier":"2026-05-21"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-09-30","deadline_leverancier":"2026-07-02"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-10-28","deadline_leverancier":"2026-08-13"},{"jaar":2026,"maand":"december-januari","publicatiedatum":"2026-12-02","deadline_leverancier":"2026-09-17"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-01-27","deadline_leverancier":"2026-11-05"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-02-24","deadline_leverancier":"2026-12-03"},{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-01","deadline_leverancier":"2026-01-31"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-01","deadline_leverancier":"2026-07-15"}]},{"marketingmiddel":"Web-only actie","pakketnaam":"Web-only actie","rubriek":"Actie","segment":"Lokale installateurs","doorbelasting":false,"basistarief":435.0,"formaten":[],"periodes":[{"jaar":2026,"maand":"april","publicatiedatum":"2026-04-14","deadline_leverancier":"2026-03-24"},{"jaar":2026,"maand":"mei","publicatiedatum":"2026-05-19","deadline_leverancier":"2026-04-28"},{"jaar":2026,"maand":"juni","publicatiedatum":"2026-06-16","deadline_leverancier":"2026-05-26"},{"jaar":2026,"maand":"juli","publicatiedatum":"2026-07-14","deadline_leverancier":"2026-06-23"},{"jaar":2026,"maand":"augustus","publicatiedatum":"2026-08-18","deadline_leverancier":"2026-07-28"},{"jaar":2026,"maand":"september","publicatiedatum":"2026-09-15","deadline_leverancier":"2026-08-25"},{"jaar":2026,"maand":"oktober","publicatiedatum":"2026-10-20","deadline_leverancier":"2026-09-29"},{"jaar":2026,"maand":"november","publicatiedatum":"2026-11-17","deadline_leverancier":"2026-10-27"},{"jaar":2026,"maand":"december","publicatiedatum":"2026-12-15","deadline_leverancier":"2026-11-24"},{"jaar":2027,"maand":"januari","publicatiedatum":"2027-01-19","deadline_leverancier":"2026-12-29"},{"jaar":2027,"maand":"februari","publicatiedatum":"2027-02-16","deadline_leverancier":"2027-01-26"},{"jaar":2027,"maand":"maart","publicatiedatum":"2027-03-16","deadline_leverancier":"2027-01-23"}]},{"marketingmiddel":"Werkbus","pakketnaam":"Werkbus","rubriek":"","segment":"","doorbelasting":false,"basistarief":null,"formaten":[],"periodes":[{"jaar":2026,"maand":"juli-augustus","publicatiedatum":"2026-07-01","deadline_leverancier":"2026-05-01"}]},{"marketingmiddel":"Technische Unie campagnes","pakketnaam":"TU campagnes - Cadeauweken","rubriek":"","segment":"","doorbelasting":false,"basistarief":null,"formaten":[],"periodes":[{"jaar":2026,"maand":"december","publicatiedatum":"2026-12-01","deadline_leverancier":"2026-09-15"}]}],"dropdowns":{"marketingmiddelen":["Industrie en Technische dienst","Inspiratiecentra & TU Boot","Online Bewustwording","Online marketing","SanitairID","Select","TU campagnes - Cadeauweken","Technische Unie campagnes","Technoscoop magazine","Technoscoop nieuwsbrief","Toppers","Web-only actie","Werkbus"],"rubrieken":["Actie","Actie / Sparen","Assortiment / Conversie","Introductie","Introductie /  Assortiment","Thema: inspelen op actualiteiten","Thema: inspelen op actualiteiten en trends"],"segmenten":["Alle klanten van TU","Consumenten","Industrie","Lokale installateurs","Lokale installateurs / Middelgroot/groot","Lokale installateurs / Middelgroot/groot / Industrie","Middelgroot/groot","Showroomhouders, interieurarchitecten, stylisten en installateurs","Technische dienst"],"formaten":["1/1","1/2","1/4","1/8","achterpagina","spread"]}};
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [m, c] = await Promise.all([db.get("marketingmiddel", { order: "pakketnaam.asc" }), db.get("marketingmiddel_capaciteit", { order: "periode_start.asc" })]);
-      setItems(m); setCaps(c);
-      if (detail) setDetail(prev => m.find(x => x.id === prev?.id) || null);
-    } catch (e) { toast(e.message, "error"); }
-    setLoading(false);
-  }, [toast, detail?.id]);
-  useEffect(() => { load(); }, []);
+// ============================================================
+// SearchableDropdown – doorzoekbare dropdown met "+ Nieuw aanmaken"
+// ============================================================
+function SearchableDropdown({ value, options, onChange, placeholder, allowNew, disabled }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newVal, setNewVal] = useState("");
+  const ref = React.useRef(null);
 
-  const rubs = [...new Set(items.map(m => m.rubriek))];
-  const segs = [...new Set(items.map(m => m.segment))];
-  const tcs = [...new Set(items.map(m => m.type_campagne))];
-  const filtered = items.filter(m => {
-    if (f.rubriek && m.rubriek !== f.rubriek) return false;
-    if (f.segment && m.segment !== f.segment) return false;
-    if (f.type_campagne && m.type_campagne !== f.type_campagne) return false;
-    if (f.beschikbaar === "beschikbaar" && getCap(caps, m.id).total - getCap(caps, m.id).used <= 0) return false;
-    if (f.beschikbaar === "vol" && getCap(caps, m.id).total - getCap(caps, m.id).used > 0) return false;
-    return true;
-  });
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setAdding(false); } };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
-  async function save(data, eid) {
-    try {
-      if (eid) { await db.patch("marketingmiddel", eid, data); toast("Bijgewerkt"); }
-      else { await db.post("marketingmiddel", data); toast("Aangemaakt"); }
-      setModal(null); load();
-    } catch (e) { toast(e.message, "error"); }
-  }
-  async function remove(m) {
-    try {
-      const lnk = await db.get("planner_marketingmiddel", { eq: { marketingmiddel_id: m.id } });
-      if (lnk.filter(l => l.status === "Gepland" || l.status === "In uitvoering").length) { toast("Kan niet: actieve koppelingen", "error"); return; }
-      if (!confirm(`"${m.pakketnaam}" verwijderen?`)) return;
-      for (const c of caps.filter(c => c.marketingmiddel_id === m.id)) await db.del("marketingmiddel_capaciteit", c.id);
-      await db.del("marketingmiddel", m.id);
-      toast("Verwijderd"); setDetail(null); load();
-    } catch (e) { toast(e.message, "error"); }
-  }
-  async function saveCap(data, eid) {
-    try {
-      if (eid) { await db.patch("marketingmiddel_capaciteit", eid, data); toast("Bijgewerkt"); }
-      else { await db.post("marketingmiddel_capaciteit", { ...data, marketingmiddel_id: detail.id }); toast("Toegevoegd"); }
-      setCapModal(null); load();
-    } catch (e) { toast(e.message, "error"); }
-  }
-  async function delCap(c) {
-    if (!confirm("Verwijderen?")) return;
-    try { await db.del("marketingmiddel_capaciteit", c.id); toast("Verwijderd"); load(); }
-    catch (e) { toast(e.message, "error"); }
+  const filtered = options.filter(o => o.toLowerCase().includes(q.toLowerCase()));
+
+  function select(v) { onChange(v); setOpen(false); setQ(""); setAdding(false); }
+  function addNew() {
+    if (!newVal.trim()) return;
+    select(newVal.trim());
+    setNewVal("");
+    setAdding(false);
   }
 
-  if (detail) {
-    const mCaps = caps.filter(c => c.marketingmiddel_id === detail.id);
-    return <div>
-      <button onClick={() => setDetail(null)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug</button>
-      <Card style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{detail.rubriek} · {detail.segment}</div>
-            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{detail.pakketnaam}</h2>
-          </div>
-          {!isInkoop && <div style={{ display: "flex", gap: 8 }}>
-            <Btn small onClick={() => setModal(detail)}>Bewerken</Btn>
-            <Btn small danger onClick={() => remove(detail)}>Verwijderen</Btn>
-          </div>}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 16, marginTop: 20 }}>
-          {[["Formaat", detail.formaat || "—"], ["Tarief", `€ ${fmt(detail.tarief)}`], ["Type Campagne", detail.type_campagne], ["Periode", fmtPeriod(detail.startdatum, detail.einddatum) || "—"], ["Startdatum", fmtD(detail.startdatum) || "—"], ["Einddatum", fmtD(detail.einddatum) || "—"], ["Deadline", fmtD(detail.deadline) || "—"]].map(([l, v]) => (
-            <div key={l}><div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 3 }}>{l}</div><div style={{ fontSize: 14, fontWeight: 500 }}>{v}</div></div>
-          ))}
-        </div>
-      </Card>
-      <Card style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Capaciteitsperiodes</h3>
-          {!isInkoop && <Btn small primary onClick={() => setCapModal("new")}>+ Periode</Btn>}
-        </div>
-        {mCaps.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> :
-          <div style={{ padding: "4px 0" }}>
-            {mCaps.map((c, i) => {
-              const av = c.totale_capaciteit - c.gereserveerd;
-              const dlP = c.deadline && new Date(c.deadline) < new Date();
-              return <div key={c.id} style={{ display: "flex", alignItems: "center", padding: "14px 24px", borderBottom: i < mCaps.length - 1 ? "1px solid var(--b)" : "none", gap: 20 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{c.naam || fmtPeriod(c.periode_start, c.periode_eind)}</div>
-                  <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--t3)" }}>
-                    <span>{fmtD(c.periode_start)} → {fmtD(c.periode_eind)}</span>
-                    {c.deadline && <span>Deadline: <strong style={{ color: dlP ? "var(--r)" : "var(--a)" }}>{fmtD(c.deadline)}</strong></span>}
-                  </div>
-                  <div style={{ maxWidth: 220, marginTop: 6 }}><CapBar used={c.gereserveerd} total={c.totale_capaciteit} /></div>
-                </div>
-                <div style={{ textAlign: "right", minWidth: 80 }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: av <= 0 ? "var(--r)" : "var(--t)" }}>{av}</div>
-                  <div style={{ fontSize: 11, color: "var(--t3)" }}>beschikbaar</div>
-                </div>
-                {!isInkoop && <div style={{ display: "flex", gap: 6 }}>
-                  <Btn small onClick={() => setCapModal(c)}>✎</Btn>
-                  <Btn small danger onClick={() => delCap(c)}>✕</Btn>
-                </div>}
-              </div>;
-            })}
-          </div>}
-      </Card>
-      {modal && <MiddelForm item={typeof modal === "object" ? modal : null} onSave={save} onClose={() => setModal(null)} />}
-      {capModal && <CapForm item={typeof capModal === "object" ? capModal : null} onSave={saveCap} onClose={() => setCapModal(null)} />}
-    </div>;
-  }
-
-  return <div>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-      <div><h2 style={{ fontSize: 22, fontWeight: 700 }}>Marketingmiddelen{isInkoop && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2><p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} middelen</p></div>
-      {!isInkoop && <Btn primary onClick={() => setModal("new")}>+ Nieuw middel</Btn>}
+  return <div ref={ref} style={{ position: "relative" }}>
+    <div
+      onClick={() => { if (!disabled) setOpen(o => !o); }}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "9px 12px", border: "1px solid var(--b)", borderRadius: "var(--rdx)",
+        background: disabled ? "var(--s2)" : "var(--s)", cursor: disabled ? "default" : "pointer",
+        fontSize: 14, color: value ? "var(--t)" : "var(--t3)", minHeight: 38,
+        borderColor: open ? "var(--tu)" : "var(--b)",
+        boxShadow: open ? "0 0 0 2px var(--tug)" : "none"
+      }}
+    >
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{value || placeholder || "Selecteer..."}</span>
+      <span style={{ color: "var(--t3)", fontSize: 10, marginLeft: 8, flexShrink: 0 }}>▼</span>
     </div>
-    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[{ key: "rubriek", placeholder: "Alle rubrieken", opts: rubs }, { key: "segment", placeholder: "Alle segmenten", opts: segs }, { key: "type_campagne", placeholder: "Alle types", opts: tcs }, { key: "beschikbaar", placeholder: "Beschikbaarheid", opts: ["beschikbaar", "vol"] }]} />
-    {loading ? <Card style={{ padding: 0 }}>{[...Array(4)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "60%", marginBottom: 8 }} /><div className="sk" style={{ width: "30%" }} /></div>)}</Card>
-      : filtered.length === 0 ? <Card><Empty icon="📦" text="Geen middelen gevonden" /></Card>
-      : <Card style={{ padding: 0 }}>
-        <table><thead><tr><Th>Pakketnaam</Th><Th>Formaat</Th><Th>Rubriek</Th><Th>Segment</Th><Th>Periode</Th><Th>Deadline</Th><Th>Tarief</Th></tr></thead>
-          <tbody>{filtered.map(m => {
-            const dlP = m.deadline && new Date(m.deadline) < new Date();
-            return <tr key={m.id} onClick={() => setDetail(m)} style={{ cursor: "pointer", borderBottom: "1px solid var(--b)", transition: "background .1s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--tug)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-              <Td bold>{m.pakketnaam}</Td><Td>{m.formaat || "—"}</Td><Td>{m.rubriek}</Td><Td>{m.segment}</Td>
-              <Td>{fmtPeriod(m.startdatum, m.einddatum) || "—"}</Td>
-              <Td>{m.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(m.deadline)}</span> : "—"}</Td>
-              <Td mono>€{fmt(m.tarief)}</Td>
-            </tr>;
-          })}</tbody>
-        </table>
-      </Card>}
-    {modal && <MiddelForm item={typeof modal === "object" ? modal : null} onSave={save} onClose={() => setModal(null)} />}
+    {open && (
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, marginTop: 4, background: "var(--s)", border: "1.5px solid var(--b)", borderRadius: "var(--rds)", boxShadow: "var(--shx)", maxHeight: 260, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "6px 8px", borderBottom: "1px solid var(--b)" }}>
+          <input placeholder="Zoeken..." value={q} onChange={e => setQ(e.target.value)} onClick={e => e.stopPropagation()} autoFocus
+            style={{ border: "1px solid var(--b)", padding: "6px 10px", fontSize: 13, borderRadius: 4, width: "100%" }} />
+        </div>
+        <div style={{ overflow: "auto", flex: 1, maxHeight: 180 }}>
+          {filtered.map(o => (
+            <div key={o} onClick={() => select(o)}
+              style={{ padding: "8px 12px", fontSize: 13, cursor: "pointer", background: o === value ? "var(--tul)" : "transparent", fontWeight: o === value ? 600 : 400, borderBottom: "1px solid var(--b)" }}
+              onMouseEnter={e => { if (o !== value) e.currentTarget.style.background = "var(--tug)"; }}
+              onMouseLeave={e => { if (o !== value) e.currentTarget.style.background = "transparent"; }}
+            >{o}</div>
+          ))}
+          {filtered.length === 0 && <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--t3)" }}>Geen resultaten</div>}
+        </div>
+        {allowNew !== false && (
+          <div style={{ borderTop: "1px solid var(--b)", padding: "6px 8px" }}>
+            {adding ? (
+              <div style={{ display: "flex", gap: 4 }}>
+                <input placeholder="Nieuwe waarde..." value={newVal} onChange={e => setNewVal(e.target.value)} onKeyDown={e => e.key === "Enter" && addNew()} autoFocus
+                  style={{ flex: 1, padding: "6px 10px", fontSize: 13, border: "1px solid var(--b)", borderRadius: 4 }} />
+                <Btn small primary onClick={addNew}>✓</Btn>
+                <Btn small onClick={() => { setAdding(false); setNewVal(""); }}>✕</Btn>
+              </div>
+            ) : (
+              <div onClick={() => setAdding(true)} style={{ padding: "6px 8px", fontSize: 13, color: "var(--tu)", fontWeight: 600, cursor: "pointer", borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--tul)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                + Nieuw aanmaken
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )}
   </div>;
 }
 
-function MiddelForm({ item, onSave, onClose }) {
-  const [d, setD] = useState(item || { pakketnaam: "", rubriek: "", formaat: "", tarief: "", type_campagne: "", segment: "", info_link: "", startdatum: "", einddatum: "", deadline: "" });
-  const s = (k, v) => setD(p => ({ ...p, [k]: v }));
-  const ok = d.pakketnaam && d.rubriek && d.formaat && Number(d.tarief) > 0 && d.type_campagne && d.segment;
-  return <Modal title={item ? "Middel bewerken" : "Nieuw marketingmiddel"} onClose={onClose}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-      <Field label="Pakketnaam" required><input value={d.pakketnaam} onChange={e => s("pakketnaam", e.target.value)} /></Field>
-      <Field label="Rubriek" required><input value={d.rubriek} onChange={e => s("rubriek", e.target.value)} /></Field>
-      <Field label="Formaat" required><input value={d.formaat} onChange={e => s("formaat", e.target.value)} /></Field>
-      <Field label="Tarief (€)" required><input type="number" step="0.01" value={d.tarief} onChange={e => s("tarief", e.target.value)} /></Field>
-      <Field label="Type Campagne" required><input value={d.type_campagne} onChange={e => s("type_campagne", e.target.value)} /></Field>
-      <Field label="Segment" required><input value={d.segment} onChange={e => s("segment", e.target.value)} /></Field>
-      <Field label="Info Link"><input value={d.info_link || ""} onChange={e => s("info_link", e.target.value)} placeholder="https://" /></Field><div />
-      <Field label="Startdatum"><input type="date" value={d.startdatum || ""} onChange={e => s("startdatum", e.target.value || null)} /></Field>
-      <Field label="Einddatum"><input type="date" value={d.einddatum || ""} onChange={e => s("einddatum", e.target.value || null)} /></Field>
-      <Field label="Deadline"><input type="date" value={d.deadline || ""} onChange={e => s("deadline", e.target.value || null)} /></Field>
+// ============================================================
+// MIDDELEN PAGE — 3-level structure with migration data
+// ============================================================
+function MiddelenPage({ toast, role }) {
+  const [items, setItems] = useState(() => MIGRATION.middelen.map((m, i) => ({ ...m, _id: i })));
+  const [detail, setDetail] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [f, setF] = useState({});
+  const isInkoop = role === "inkoop";
+
+  // Collect all unique dropdown values (including any user-added ones)
+  const allMM = [...new Set([...MIGRATION.dropdowns.marketingmiddelen, ...items.map(i => i.marketingmiddel)])].sort();
+  const allRub = [...new Set([...MIGRATION.dropdowns.rubrieken, ...items.map(i => i.rubriek).filter(Boolean)])].sort();
+  const allSeg = [...new Set([...MIGRATION.dropdowns.segmenten, ...items.map(i => i.segment).filter(Boolean)])].sort();
+  const allFmt = [...new Set([...MIGRATION.dropdowns.formaten, ...items.flatMap(i => i.formaten.map(f => f.formaat))])].sort();
+
+  const pakketten = (mm) => [...new Set(items.filter(i => i.marketingmiddel === mm).map(i => i.pakketnaam))];
+
+  const filtered = items.filter(m => {
+    if (f.marketingmiddel && m.marketingmiddel !== f.marketingmiddel) return false;
+    if (f.rubriek && m.rubriek !== f.rubriek) return false;
+    if (f.segment && m.segment !== f.segment) return false;
+    if (f.doorbelasting === "ja" && !m.doorbelasting) return false;
+    if (f.doorbelasting === "nee" && m.doorbelasting) return false;
+    return true;
+  });
+
+  function save(data, editId) {
+    if (editId != null) {
+      setItems(prev => prev.map(m => m._id === editId ? { ...m, ...data } : m));
+      setDetail(prev => prev && prev._id === editId ? { ...prev, ...data } : prev);
+      toast("Bijgewerkt");
+    } else {
+      const newItem = { ...data, _id: Date.now(), formaten: [], periodes: [] };
+      setItems(prev => [...prev, newItem]);
+      setDetail(newItem);
+      toast("Aangemaakt");
+    }
+    setModal(null);
+  }
+
+  function remove(m) {
+    if (!confirm(`"${m.pakketnaam}" verwijderen?`)) return;
+    setItems(prev => prev.filter(x => x._id !== m._id));
+    setDetail(null);
+    toast("Verwijderd");
+  }
+
+  function addFormaat(mid) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, formaten: [...m.formaten, { formaat: "", tarief: 0 }] } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, formaten: [...prev.formaten, { formaat: "", tarief: 0 }] } : prev);
+  }
+  function updateFormaat(mid, idx, key, val) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, formaten: m.formaten.map((f, i) => i === idx ? { ...f, [key]: val } : f) } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, formaten: prev.formaten.map((f, i) => i === idx ? { ...f, [key]: val } : f) } : prev);
+  }
+  function removeFormaat(mid, idx) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, formaten: m.formaten.filter((_, i) => i !== idx) } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, formaten: prev.formaten.filter((_, i) => i !== idx) } : prev);
+  }
+  function addPeriode(mid) {
+    const np = { jaar: 2026, maand: "", publicatiedatum: null, deadline_leverancier: null };
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, periodes: [...m.periodes, np] } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, periodes: [...prev.periodes, np] } : prev);
+  }
+  function updatePeriode(mid, idx, key, val) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, periodes: m.periodes.map((p, i) => i === idx ? { ...p, [key]: val } : p) } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, periodes: prev.periodes.map((p, i) => i === idx ? { ...p, [key]: val } : p) } : prev);
+  }
+  function removePeriode(mid, idx) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, periodes: m.periodes.filter((_, i) => i !== idx) } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, periodes: prev.periodes.filter((_, i) => i !== idx) } : prev);
+  }
+  function updateBasistarief(mid, val) {
+    setItems(prev => prev.map(m => m._id === mid ? { ...m, basistarief: val } : m));
+    setDetail(prev => prev && prev._id === mid ? { ...prev, basistarief: val } : prev);
+  }
+
+  // ── DETAIL VIEW ──
+  if (detail) {
+    const d = items.find(m => m._id === detail._id) || detail;
+    const hasFormaten = d.formaten.length > 0;
+    const nextDeadline = d.periodes.filter(p => p.deadline_leverancier && new Date(p.deadline_leverancier) >= new Date()).sort((a, b) => a.deadline_leverancier.localeCompare(b.deadline_leverancier))[0];
+
+    return <div>
+      <button onClick={() => setDetail(null)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--tu)", marginBottom: 20, padding: 0 }}>← Terug naar overzicht</button>
+
+      {/* Header card */}
+      <Card style={{ padding: 28, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{d.marketingmiddel}</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{d.pakketnaam}</h2>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              {d.rubriek && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{d.rubriek}</span>}
+              {d.segment && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{d.segment}</span>}
+              {d.doorbelasting && <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99, background: "var(--tul)", color: "var(--tu2)", fontWeight: 600 }}>Doorbelasting</span>}
+            </div>
+          </div>
+          {!isInkoop && <div style={{ display: "flex", gap: 8 }}>
+            <Btn small onClick={() => setModal(d)}>Bewerken</Btn>
+            <Btn small danger onClick={() => remove(d)}>Verwijderen</Btn>
+          </div>}
+        </div>
+      </Card>
+
+      {/* Stats row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
+        <StatCard label="Formaten" value={d.formaten.length || "—"} delay={0} />
+        <StatCard label={hasFormaten ? "Vanaf" : "Basistarief"} value={hasFormaten ? `€${fmt(Math.min(...d.formaten.map(f => f.tarief)))}` : d.basistarief != null ? `€${fmt(d.basistarief)}` : "—"} delay={50} />
+        <StatCard label="Periodes" value={d.periodes.length} delay={100} />
+        <StatCard label="Volgende deadline" value={nextDeadline ? fmtD(nextDeadline.deadline_leverancier) : "—"} delay={150} />
+      </div>
+
+      {/* ── FORMATEN & TARIEVEN ── */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Formaten & Tarieven</h3>
+          {!isInkoop && hasFormaten && <Btn small primary onClick={() => addFormaat(d._id)}>+ Formaat</Btn>}
+        </div>
+        {hasFormaten ? (
+          <div style={{ padding: 0 }}>
+            <table>
+              <thead><tr><Th>Formaat</Th><Th>Tarief</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
+              <tbody>
+                {d.formaten.map((f, i) => (
+                  <tr key={i} style={{ borderBottom: i < d.formaten.length - 1 ? "1px solid var(--b)" : "none" }}>
+                    <td style={{ padding: "8px 16px", width: "50%" }}>
+                      {isInkoop ? <span style={{ fontSize: 14 }}>{f.formaat}</span>
+                        : <SearchableDropdown value={f.formaat} options={allFmt} onChange={v => updateFormaat(d._id, i, "formaat", v)} placeholder="Kies formaat" />}
+                    </td>
+                    <td style={{ padding: "8px 16px" }}>
+                      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(f.tarief)}</span>
+                        : <input type="number" step="0.01" value={f.tarief} onChange={e => updateFormaat(d._id, i, "tarief", parseFloat(e.target.value) || 0)} style={{ width: 140, fontFamily: "'JetBrains Mono',monospace" }} />}
+                    </td>
+                    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
+                      <Btn small danger onClick={() => removeFormaat(d._id, i)}>✕</Btn>
+                    </td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ padding: "16px 24px" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 6 }}>Basistarief</div>
+            {isInkoop ? (
+              <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>
+                {d.basistarief != null ? `€${fmt(d.basistarief)}` : "—"}
+              </span>
+            ) : (
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <input type="number" step="0.01" value={d.basistarief ?? ""} onChange={e => updateBasistarief(d._id, e.target.value ? parseFloat(e.target.value) : null)} style={{ width: 180, fontFamily: "'JetBrains Mono',monospace" }} placeholder="Tarief (€)" />
+                <span style={{ fontSize: 12, color: "var(--t3)" }}>of</span>
+                <Btn small onClick={() => addFormaat(d._id)}>+ Formaatvarianten toevoegen</Btn>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* ── CAPACITEITSPERIODES ── */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--b)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700 }}>Capaciteitsperiodes <span style={{ color: "var(--t3)", fontWeight: 400 }}>({d.periodes.length})</span></h3>
+          {!isInkoop && <Btn small primary onClick={() => addPeriode(d._id)}>+ Periode</Btn>}
+        </div>
+        {d.periodes.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> : (
+          <div style={{ overflowX: "auto" }}>
+            <table>
+              <thead><tr><Th>Jaar</Th><Th>Maand / Periode</Th><Th>Publicatiedatum</Th><Th>Deadline leverancier</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
+              <tbody>
+                {d.periodes.map((p, i) => {
+                  const dlOverdue = p.deadline_leverancier && new Date(p.deadline_leverancier) < new Date();
+                  return <tr key={i} style={{ borderBottom: i < d.periodes.length - 1 ? "1px solid var(--b)" : "none" }}>
+                    <td style={{ padding: "8px 16px" }}>
+                      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>{p.jaar}</span>
+                        : <input type="number" value={p.jaar || ""} onChange={e => updatePeriode(d._id, i, "jaar", parseInt(e.target.value) || null)} style={{ width: 80, fontFamily: "'JetBrains Mono',monospace" }} />}
+                    </td>
+                    <td style={{ padding: "8px 16px" }}>
+                      {isInkoop ? <span style={{ fontSize: 14 }}>{p.maand}</span>
+                        : <input value={p.maand} onChange={e => updatePeriode(d._id, i, "maand", e.target.value)} style={{ width: 160 }} placeholder="bijv. april, juli-augustus" />}
+                    </td>
+                    <td style={{ padding: "8px 16px" }}>
+                      {isInkoop ? <span style={{ fontSize: 13 }}>{p.publicatiedatum ? fmtD(p.publicatiedatum) : "—"}</span>
+                        : <input type="date" value={p.publicatiedatum || ""} onChange={e => updatePeriode(d._id, i, "publicatiedatum", e.target.value || null)} />}
+                    </td>
+                    <td style={{ padding: "8px 16px" }}>
+                      {isInkoop ? (
+                        <span style={{ fontSize: 13, fontWeight: dlOverdue ? 600 : 400, color: dlOverdue ? "var(--r)" : "var(--t2)" }}>
+                          {p.deadline_leverancier ? fmtD(p.deadline_leverancier) : "—"}{dlOverdue ? " ⚠" : ""}
+                        </span>
+                      ) : <input type="date" value={p.deadline_leverancier || ""} onChange={e => updatePeriode(d._id, i, "deadline_leverancier", e.target.value || null)} />}
+                    </td>
+                    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
+                      <Btn small danger onClick={() => removePeriode(d._id, i)}>✕</Btn>
+                    </td>}
+                  </tr>;
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {modal && <MiddelForm item={modal} onSave={save} onClose={() => setModal(null)} allMM={allMM} allRub={allRub} allSeg={allSeg} pakketten={pakketten} />}
+    </div>;
+  }
+
+  // ── LIST VIEW ──
+  return <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div>
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>Marketingmiddelen{isInkoop && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}> (read-only)</span>}</h2>
+        <p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} van {items.length} middelen</p>
+      </div>
+      {!isInkoop && <Btn primary onClick={() => setModal("new")}>+ Nieuw middel</Btn>}
     </div>
+
+    <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[
+      { key: "marketingmiddel", placeholder: "Alle marketingmiddelen", opts: allMM },
+      { key: "rubriek", placeholder: "Alle rubrieken", opts: allRub },
+      { key: "segment", placeholder: "Alle segmenten", opts: allSeg },
+      { key: "doorbelasting", placeholder: "Doorbelasting", opts: ["ja", "nee"] }
+    ]} />
+
+    <Card style={{ padding: 0 }}>
+      <table>
+        <thead><tr><Th>Marketingmiddel</Th><Th>Pakketnaam</Th><Th>Rubriek</Th><Th>Segment</Th><Th>Doorb.</Th><Th>Formaten</Th><Th>Periodes</Th><Th>Tarief</Th></tr></thead>
+        <tbody>
+          {filtered.map(m => {
+            const tarief = m.formaten.length > 0
+              ? `€${fmt(Math.min(...m.formaten.map(f => f.tarief)))} – €${fmt(Math.max(...m.formaten.map(f => f.tarief)))}`
+              : m.basistarief != null ? `€${fmt(m.basistarief)}` : "—";
+            return <tr key={m._id} onClick={() => setDetail(m)} style={{ cursor: "pointer", borderBottom: "1px solid var(--b)", transition: "background .1s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--tug)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <Td><span style={{ fontSize: 12, color: "var(--t3)" }}>{m.marketingmiddel}</span></Td>
+              <Td bold>{m.pakketnaam}</Td>
+              <Td>{m.rubriek || "—"}</Td>
+              <Td><span style={{ fontSize: 12 }}>{m.segment || "—"}</span></Td>
+              <Td>{m.doorbelasting ? <span style={{ color: "var(--tu)", fontWeight: 600 }}>Ja</span> : <span style={{ color: "var(--t3)" }}>Nee</span>}</Td>
+              <Td mono>{m.formaten.length || "—"}</Td>
+              <Td mono>{m.periodes.length || "—"}</Td>
+              <Td mono style={{ fontSize: 12 }}>{tarief}</Td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+      {filtered.length === 0 && <Empty icon="📦" text="Geen middelen gevonden" />}
+    </Card>
+
+    {modal && <MiddelForm item={typeof modal === "object" ? modal : null} onSave={save} onClose={() => setModal(null)} allMM={allMM} allRub={allRub} allSeg={allSeg} pakketten={pakketten} />}
+  </div>;
+}
+
+// ============================================================
+// MiddelForm — create/edit marketingmiddel with searchable dropdowns
+// ============================================================
+function MiddelForm({ item, onSave, onClose, allMM, allRub, allSeg, pakketten }) {
+  const [d, setD] = useState(item || { marketingmiddel: "", pakketnaam: "", rubriek: "", segment: "", doorbelasting: false });
+  const s = (k, v) => setD(p => ({ ...p, [k]: v }));
+  const ok = d.marketingmiddel && d.pakketnaam;
+  const pkOpts = d.marketingmiddel ? pakketten(d.marketingmiddel) : [];
+
+  return <Modal title={item?._id != null ? "Middel bewerken" : "Nieuw marketingmiddel"} onClose={onClose}>
+    <Field label="Marketingmiddel" required>
+      <SearchableDropdown value={d.marketingmiddel} options={allMM} onChange={v => { s("marketingmiddel", v); if (!pkOpts.includes(d.pakketnaam)) s("pakketnaam", ""); }} placeholder="Selecteer of maak nieuw aan" />
+    </Field>
+    <Field label="Pakketnaam" required>
+      <SearchableDropdown value={d.pakketnaam} options={pkOpts} onChange={v => s("pakketnaam", v)} placeholder={d.marketingmiddel ? "Selecteer of maak nieuw aan" : "Kies eerst een marketingmiddel"} disabled={!d.marketingmiddel} />
+    </Field>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+      <Field label="Rubriek">
+        <SearchableDropdown value={d.rubriek} options={allRub} onChange={v => s("rubriek", v)} placeholder="Selecteer..." />
+      </Field>
+      <Field label="Segment">
+        <SearchableDropdown value={d.segment} options={allSeg} onChange={v => s("segment", v)} placeholder="Selecteer..." />
+      </Field>
+    </div>
+    <Field label="Doorbelasting Productnieuws">
+      <div style={{ display: "flex", gap: 8 }}>
+        {[{ v: true, l: "Ja" }, { v: false, l: "Nee" }].map(o => (
+          <button key={o.l} onClick={() => s("doorbelasting", o.v)}
+            style={{ padding: "7px 20px", borderRadius: "var(--rdx)", border: `1.5px solid ${d.doorbelasting === o.v ? "var(--tu)" : "var(--b)"}`, background: d.doorbelasting === o.v ? "var(--tul)" : "var(--s)", color: d.doorbelasting === o.v ? "var(--tu2)" : "var(--t2)", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+            {o.l}
+          </button>
+        ))}
+      </div>
+    </Field>
     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
       <Btn onClick={onClose}>Annuleren</Btn>
-      <Btn primary disabled={!ok} onClick={() => onSave({ pakketnaam: d.pakketnaam, rubriek: d.rubriek, formaat: d.formaat, tarief: parseFloat(d.tarief), type_campagne: d.type_campagne, segment: d.segment, info_link: d.info_link || null, startdatum: d.startdatum || null, einddatum: d.einddatum || null, deadline: d.deadline || null }, item?.id)}>Opslaan</Btn>
+      <Btn primary disabled={!ok} onClick={() => onSave({ marketingmiddel: d.marketingmiddel, pakketnaam: d.pakketnaam, rubriek: d.rubriek, segment: d.segment, doorbelasting: d.doorbelasting }, item?._id)}>Opslaan</Btn>
     </div>
   </Modal>;
 }
 
-function CapForm({ item, onSave, onClose }) {
-  const [d, setD] = useState(item || { periode_start: "", periode_eind: "", totale_capaciteit: "" });
-  const ok = d.periode_start && d.periode_eind && d.periode_eind > d.periode_start && Number(d.totale_capaciteit) > 0;
-  return <Modal title={item ? "Capaciteit bewerken" : "Nieuwe periode"} onClose={onClose}>
-    <Field label="Periode start" required><input type="date" value={d.periode_start} onChange={e => setD(p => ({ ...p, periode_start: e.target.value }))} /></Field>
-    <Field label="Periode eind" required><input type="date" value={d.periode_eind} onChange={e => setD(p => ({ ...p, periode_eind: e.target.value }))} /></Field>
-    <Field label="Totale capaciteit" required><input type="number" min="1" value={d.totale_capaciteit} onChange={e => setD(p => ({ ...p, totale_capaciteit: e.target.value }))} /></Field>
-    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
-      <Btn onClick={onClose}>Annuleren</Btn>
-      <Btn primary disabled={!ok} onClick={() => onSave({ periode_start: d.periode_start, periode_eind: d.periode_eind, totale_capaciteit: parseInt(d.totale_capaciteit), naam: `${d.periode_start} – ${d.periode_eind}` }, item?.id)}>Opslaan</Btn>
-    </div>
-  </Modal>;
-}
 
 // ============================================================
 // LEVERANCIERS PAGE
@@ -657,7 +777,7 @@ function LeveranciersPage({ toast }) {
 }
 
 // ============================================================
-// PLANNERS PAGE — Inkoop = schrijfrechten, Marketing = read-only
+// PLANNERS PAGE
 // ============================================================
 function PlannersPage({ toast, role }) {
   const [planners, setPlanners] = useState([]);
@@ -788,56 +908,23 @@ function PlannersPage({ toast, role }) {
   async function exportXLSX() {
     toast("Export wordt voorbereid...");
     try {
-      const allMiddelen = await db.get("planner_marketingmiddel", {
-        select: "*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,segment,type_campagne,formaat,tarief,startdatum,einddatum,deadline)"
-      });
+      const allMiddelen = await db.get("planner_marketingmiddel", { select: "*,marketingmiddel:marketingmiddel_id(pakketnaam,rubriek,segment,type_campagne,formaat,tarief,startdatum,einddatum,deadline)" });
       const middelenPerPlanner = {};
-      allMiddelen.forEach(m => {
-        if (!middelenPerPlanner[m.planner_id]) middelenPerPlanner[m.planner_id] = [];
-        middelenPerPlanner[m.planner_id].push(m);
-      });
-
+      allMiddelen.forEach(m => { if (!middelenPerPlanner[m.planner_id]) middelenPerPlanner[m.planner_id] = []; middelenPerPlanner[m.planner_id].push(m); });
       const XLSX = window.XLSX;
       const wb = XLSX.utils.book_new();
-
       const h1 = ["Planner titel","Leverancier","Leveranciernummer","Type","Status","Aantal middelen","Totaal tarief (EUR)","Gem. voortgang (%)"];
-      const r1 = filtered.map(p => {
-        const mm = middelenPerPlanner[p.id] || [];
-        return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0];
-      });
-      const ws1 = XLSX.utils.aoa_to_sheet([h1, ...r1]);
-      ws1["!cols"] = [32,24,18,16,14,16,20,16].map(w=>({wch:w}));
-      XLSX.utils.book_append_sheet(wb, ws1, "Planners");
-
+      const r1 = filtered.map(p => { const mm = middelenPerPlanner[p.id] || []; return [p.titel, p.leverancier?.bedrijfsnaam || "", p.leverancier?.leveranciernummer || "", p.type || "", p.status || "", mm.length, mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0), mm.length ? Math.round(mm.reduce((s,m) => s+m.voortgang,0)/mm.length) : 0]; });
+      const ws1 = XLSX.utils.aoa_to_sheet([h1, ...r1]); ws1["!cols"] = [32,24,18,16,14,16,20,16].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws1, "Planners");
       const h2 = ["Planner titel","Leverancier","Leveranciernummer","Planner status","Planner type","Middel naam","Rubriek","Segment","Type campagne","Formaat","Tarief (EUR)","Status middel","Voortgang (%)","Startdatum","Einddatum","Deadline"];
       const r2 = [];
-      filtered.forEach(p => {
-        const mm = middelenPerPlanner[p.id] || [];
-        if (mm.length === 0) {
-          r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","","","",""]);
-        } else {
-          mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", m.marketingmiddel?.type_campagne||"", m.marketingmiddel?.formaat||"", Number(m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.einddatum||"", m.deadline||""]));
-        }
-      });
-      const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]);
-      ws2["!cols"] = [28,22,18,14,14,36,16,14,16,14,14,16,14,14,14,14].map(w=>({wch:w}));
-      XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
-
+      filtered.forEach(p => { const mm = middelenPerPlanner[p.id] || []; if (mm.length === 0) { r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status, p.type, "","","","","","","","","","",""]); } else { mm.forEach(m => r2.push([p.titel, p.leverancier?.bedrijfsnaam||"", p.leverancier?.leveranciernummer||"", p.status||"", p.type||"", m.marketingmiddel?.pakketnaam||"", m.marketingmiddel?.rubriek||"", m.marketingmiddel?.segment||"", m.marketingmiddel?.type_campagne||"", m.marketingmiddel?.formaat||"", Number(m.marketingmiddel?.tarief||0), m.status||"", m.voortgang||0, m.startdatum||"", m.einddatum||"", m.deadline||""])); } });
+      const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]); ws2["!cols"] = [28,22,18,14,14,36,16,14,16,14,14,16,14,14,14,14].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws2, "Middelen detail");
       const byLev = {};
-      filtered.forEach(p => {
-        const key = p.leverancier?.bedrijfsnaam || "Onbekend";
-        if (!byLev[key]) byLev[key] = { naam: key, nr: p.leverancier?.leveranciernummer||"", planners:0, middelen:0, tarief:0 };
-        const mm = middelenPerPlanner[p.id] || [];
-        byLev[key].planners++;
-        byLev[key].middelen += mm.length;
-        byLev[key].tarief += mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0);
-      });
+      filtered.forEach(p => { const key = p.leverancier?.bedrijfsnaam || "Onbekend"; if (!byLev[key]) byLev[key] = { naam: key, nr: p.leverancier?.leveranciernummer||"", planners:0, middelen:0, tarief:0 }; const mm = middelenPerPlanner[p.id] || []; byLev[key].planners++; byLev[key].middelen += mm.length; byLev[key].tarief += mm.reduce((s,m) => s + Number(m.marketingmiddel?.tarief||0), 0); });
       const h3 = ["Leverancier","Leveranciernummer","Aantal planners","Totaal middelen","Totaal tarief (EUR)"];
       const r3 = Object.values(byLev).sort((a,b)=>b.tarief-a.tarief).map(l=>[l.naam,l.nr,l.planners,l.middelen,l.tarief]);
-      const ws3 = XLSX.utils.aoa_to_sheet([h3, ...r3]);
-      ws3["!cols"] = [28,18,16,16,20].map(w=>({wch:w}));
-      XLSX.utils.book_append_sheet(wb, ws3, "Per leverancier");
-
+      const ws3 = XLSX.utils.aoa_to_sheet([h3, ...r3]); ws3["!cols"] = [28,18,16,16,20].map(w=>({wch:w})); XLSX.utils.book_append_sheet(wb, ws3, "Per leverancier");
       const date = new Date().toISOString().slice(0,10);
       XLSX.writeFile(wb, `planners_export_${date}.xlsx`);
       toast("Export gedownload");
@@ -880,10 +967,7 @@ function PlannersPage({ toast, role }) {
         <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span>💡</span>
           <span>Om opmerkingen &amp; historie op te slaan, voeg de tabellen toe in Supabase.
-            <button onClick={() => {
-              const sql = `-- Voer uit in Supabase SQL Editor:\n\nCREATE TABLE planner_middel_notities (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  tekst text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE planner_middel_historie (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  actie text,\n  beschrijving text NOT NULL,\n  oude_waarde text,\n  nieuwe_waarde text,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE planner_middel_notities ENABLE ROW LEVEL SECURITY;\nALTER TABLE planner_middel_historie ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow all" ON planner_middel_notities FOR ALL USING (true) WITH CHECK (true);\nCREATE POLICY "allow all" ON planner_middel_historie FOR ALL USING (true) WITH CHECK (true);`;
-              prompt("Kopieer deze SQL en voer uit in Supabase:", sql);
-            }} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontWeight: 700, textDecoration: "underline", marginLeft: 6, padding: 0, fontSize: 12 }}>Bekijk SQL →</button>
+            <button onClick={() => { const sql = `-- Voer uit in Supabase SQL Editor:\n\nCREATE TABLE planner_middel_notities (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  tekst text NOT NULL,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE planner_middel_historie (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  planner_middel_id uuid REFERENCES planner_marketingmiddel(id) ON DELETE CASCADE,\n  actie text,\n  beschrijving text NOT NULL,\n  oude_waarde text,\n  nieuwe_waarde text,\n  auteur text,\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE planner_middel_notities ENABLE ROW LEVEL SECURITY;\nALTER TABLE planner_middel_historie ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "allow all" ON planner_middel_notities FOR ALL USING (true) WITH CHECK (true);\nCREATE POLICY "allow all" ON planner_middel_historie FOR ALL USING (true) WITH CHECK (true);`; prompt("Kopieer deze SQL en voer uit in Supabase:", sql); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", fontWeight: 700, textDecoration: "underline", marginLeft: 6, padding: 0, fontSize: 12 }}>Bekijk SQL →</button>
           </span>
         </div>
       )}
@@ -895,8 +979,7 @@ function PlannersPage({ toast, role }) {
         </div>
         {pm.length === 0
           ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
-          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>
-        }
+          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>}
       </Card>
       {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.marketingmiddel_id)} toast={toast} />}
     </div>;
@@ -1053,7 +1136,7 @@ function SelModal({ onSelect, onClose, existing, toast }) {
 }
 
 // ============================================================
-// APP
+// APP — passes role to MiddelenPage
 // ============================================================
 function App() {
   const [page, setPage] = useState("planners");
