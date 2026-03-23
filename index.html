@@ -210,7 +210,7 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   const [notesLoaded, setNotesLoaded] = useState(false);
 
   const overdue = isOverdue(row.deadline);
-  const period = fmtPeriod(row.startdatum, row.einddatum);
+  const period = row.gekozen_periode || fmtPeriod(row.startdatum, row.einddatum);
   const deadline = fmtD(row.deadline);
   const statusStyle = stm[row.status] || { fg: "var(--t3)" };
 
@@ -860,20 +860,14 @@ function PlannersPage({ toast, role }) {
   }
 
   async function addMiddel(midInfo) {
-    // midInfo = { pakketnaam, marketingmiddel, formaat, tarief, rubriek, segment }
+    // midInfo = { pakketnaam, marketingmiddel, formaat, tarief, rubriek, segment, periodes[] }
     try {
-      const key = midInfo.formaat ? midInfo.pakketnaam + ":" + midInfo.formaat : midInfo.pakketnaam;
-      if (pm.find(x => (x.gekozen_formaat ? x.marketingmiddel?.pakketnaam + ":" + x.gekozen_formaat : x.marketingmiddel?.pakketnaam) === key)) {
-        toast("Al gekoppeld", "error"); return;
-      }
-
       // Find or create the marketingmiddel record in Supabase
       let midId;
       const existing = await db.get("marketingmiddel", { eq: { pakketnaam: midInfo.pakketnaam }, limit: 1 });
       if (existing.length > 0) {
         midId = existing[0].id;
       } else {
-        // Create a new record in Supabase for this middel
         const created = await db.post("marketingmiddel", {
           pakketnaam: midInfo.pakketnaam,
           rubriek: midInfo.rubriek || "",
@@ -885,25 +879,43 @@ function PlannersPage({ toast, role }) {
         midId = created[0].id;
       }
 
-      // Find the next deadline from the MIGRATION periodes
-      const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === midInfo.pakketnaam);
-      const now = new Date().toISOString().slice(0, 10);
-      const nextPeriode = migMiddel?.periodes
-        ?.filter(p => p.deadline_leverancier && p.deadline_leverancier >= now)
-        ?.sort((a, b) => a.deadline_leverancier.localeCompare(b.deadline_leverancier))[0];
+      const periodes = midInfo.periodes || [];
 
-      await db.post("planner_marketingmiddel", {
-        planner_id: detail.id,
-        marketingmiddel_id: midId,
-        status: "Gepland",
-        gekozen_formaat: midInfo.formaat || null,
-        gekozen_tarief: midInfo.tarief || null,
-        startdatum: nextPeriode?.publicatiedatum || null,
-        einddatum: null,
-        deadline: nextPeriode?.deadline_leverancier || null
-      });
+      if (periodes.length === 0) {
+        // Add one entry without specific periode
+        await db.post("planner_marketingmiddel", {
+          planner_id: detail.id,
+          marketingmiddel_id: midId,
+          status: "Gepland",
+          gekozen_formaat: midInfo.formaat || null,
+          gekozen_tarief: midInfo.tarief || null,
+          gekozen_periode: null,
+          startdatum: null,
+          einddatum: null,
+          deadline: null
+        });
+      } else {
+        // Add one entry per selected periode
+        for (const p of periodes) {
+          const periodeLabel = `${p.jaar} ${p.maand}`;
+          await db.post("planner_marketingmiddel", {
+            planner_id: detail.id,
+            marketingmiddel_id: midId,
+            status: "Gepland",
+            gekozen_formaat: midInfo.formaat || null,
+            gekozen_tarief: midInfo.tarief || null,
+            gekozen_periode: periodeLabel,
+            startdatum: p.publicatiedatum || null,
+            einddatum: null,
+            deadline: p.deadline_leverancier || null
+          });
+        }
+      }
 
-      toast(`${midInfo.pakketnaam}${midInfo.formaat ? ` (${midInfo.formaat})` : ""} toegevoegd`);
+      const label = midInfo.pakketnaam
+        + (midInfo.formaat ? ` (${midInfo.formaat})` : "")
+        + (periodes.length > 0 ? ` — ${periodes.length} periode${periodes.length !== 1 ? "s" : ""}` : "");
+      toast(`${label} toegevoegd`);
       setSelModal(false); loadPm(detail.id);
     } catch (e) { toast(e.message, "error"); }
   }
@@ -1084,7 +1096,7 @@ function PlannersPage({ toast, role }) {
                                 return <tr key={item.id} style={{ borderBottom: ii < pItems.length - 1 ? "1px solid var(--b)" : "none" }}>
                                   <td style={{ padding: "8px 14px", fontSize: 13, fontWeight: 500 }}>{item.marketingmiddel?.pakketnaam}</td>
                                   <td style={{ padding: "8px 14px", fontSize: 12, color: item.gekozen_formaat ? "var(--bl)" : "var(--t3)", fontWeight: item.gekozen_formaat ? 600 : 400 }}>{item.gekozen_formaat || "—"}</td>
-                                  <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.startdatum && item.einddatum ? fmtPeriod(item.startdatum, item.einddatum) : item.startdatum ? fmtD(item.startdatum) : "—"}</td>
+                                  <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--t2)" }}>{item.gekozen_periode || (item.startdatum ? fmtD(item.startdatum) : "—")}</td>
                                   <td style={{ padding: "8px 14px", fontSize: 12 }}>{item.deadline ? <span style={{ color: dlP ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{fmtD(item.deadline)}</span> : "—"}</td>
                                   <td style={{ padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.gekozen_tarief || item.marketingmiddel?.tarief || 0)}</td>
                                   <td style={{ padding: "8px 14px" }}><Badge status={item.status} /></td>
@@ -1133,7 +1145,10 @@ function PlannerForm({ levs, onSave, onClose }) {
 
 function SelModal({ onSelect, onClose, existing, toast }) {
   const [f, setF] = useState({});
-  const [selMiddel, setSelMiddel] = useState(null); // for formaat step
+  const [step, setStep] = useState("middel"); // "middel" | "formaat" | "periode"
+  const [selMiddel, setSelMiddel] = useState(null);
+  const [selFormaat, setSelFormaat] = useState(null); // { formaat, tarief }
+  const [selPeriodes, setSelPeriodes] = useState([]); // multi-select
 
   const items = MIGRATION.middelen;
   const allMM = [...new Set(items.map(m => m.marketingmiddel))].sort();
@@ -1147,57 +1162,195 @@ function SelModal({ onSelect, onClose, existing, toast }) {
     return true;
   });
 
-  // Check if a pakketnaam is already linked (by name, since we use in-memory ids)
   const isLinked = (pn) => existing.some(e => e === pn);
 
-  function selectMiddel(m) {
+  function goToFormaat(m) {
+    setSelMiddel(m);
     if (m.formaten.length > 0) {
-      setSelMiddel(m); // show formaat picker
+      setStep("formaat");
     } else {
-      // No formaten → direct select with basistarief
-      onSelect({ pakketnaam: m.pakketnaam, marketingmiddel: m.marketingmiddel, formaat: null, tarief: m.basistarief, rubriek: m.rubriek, segment: m.segment });
+      setSelFormaat({ formaat: null, tarief: m.basistarief });
+      setSelPeriodes([]);
+      setStep("periode");
     }
   }
 
-  function selectFormaat(m, f) {
-    onSelect({ pakketnaam: m.pakketnaam, marketingmiddel: m.marketingmiddel, formaat: f.formaat, tarief: f.tarief, rubriek: m.rubriek, segment: m.segment });
+  function goToPeriode(m, fmt) {
+    setSelFormaat(fmt);
+    setSelPeriodes([]);
+    setStep("periode");
   }
 
-  // ── FORMAAT PICKER (step 2) ──
-  if (selMiddel) {
-    return <Modal title="Formaat kiezen" onClose={() => setSelMiddel(null)} wide>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{selMiddel.marketingmiddel}</div>
-        <div style={{ fontSize: 17, fontWeight: 700 }}>{selMiddel.pakketnaam}</div>
-        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-          {selMiddel.rubriek && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{selMiddel.rubriek}</span>}
-          {selMiddel.segment && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{selMiddel.segment}</span>}
+  function togglePeriode(p) {
+    setSelPeriodes(prev => {
+      const key = `${p.jaar}-${p.maand}`;
+      const exists = prev.find(x => `${x.jaar}-${x.maand}` === key);
+      return exists ? prev.filter(x => `${x.jaar}-${x.maand}` !== key) : [...prev, p];
+    });
+  }
+
+  function confirm() {
+    onSelect({
+      pakketnaam: selMiddel.pakketnaam,
+      marketingmiddel: selMiddel.marketingmiddel,
+      formaat: selFormaat?.formaat || null,
+      tarief: selFormaat?.tarief,
+      rubriek: selMiddel.rubriek,
+      segment: selMiddel.segment,
+      periodes: selPeriodes
+    });
+  }
+
+  function goBack() {
+    if (step === "periode" && selMiddel?.formaten?.length > 0) { setStep("formaat"); setSelPeriodes([]); }
+    else if (step === "periode") { setStep("middel"); setSelMiddel(null); setSelFormaat(null); setSelPeriodes([]); }
+    else if (step === "formaat") { setStep("middel"); setSelMiddel(null); setSelFormaat(null); }
+  }
+
+  // Header for steps 2 & 3
+  function SelHeader() {
+    return <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--b)" }}>
+      <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 4 }}>{selMiddel.marketingmiddel}</div>
+      <div style={{ fontSize: 17, fontWeight: 700 }}>{selMiddel.pakketnaam}</div>
+      <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {selMiddel.rubriek && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{selMiddel.rubriek}</span>}
+        {selMiddel.segment && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--s2)", color: "var(--t2)" }}>{selMiddel.segment}</span>}
+        {selFormaat?.formaat && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--ab)", color: "var(--a)", fontWeight: 600 }}>Formaat: {selFormaat.formaat}</span>}
+        {selFormaat?.tarief != null && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--tul)", color: "var(--tu2)", fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(selFormaat.tarief)}</span>}
+      </div>
+      {/* Step indicator */}
+      <div style={{ display: "flex", gap: 4, marginTop: 12 }}>
+        {["middel", selMiddel?.formaten?.length > 0 ? "formaat" : null, "periode"].filter(Boolean).map((s, i) => (
+          <React.Fragment key={s}>
+            {i > 0 && <span style={{ color: "var(--t3)", fontSize: 11, padding: "0 2px" }}>→</span>}
+            <span style={{ fontSize: 11, fontWeight: step === s ? 700 : 400, color: step === s ? "var(--tu)" : "var(--t3)", padding: "2px 8px", borderRadius: 4, background: step === s ? "var(--tul)" : "transparent" }}>
+              {s === "middel" ? "Middel ✓" : s === "formaat" ? (step === "formaat" ? "Formaat" : "Formaat ✓") : "Periode"}
+            </span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>;
+  }
+
+  // ── STEP 3: PERIODE PICKER ──
+  if (step === "periode") {
+    const periodes = selMiddel.periodes || [];
+    const now = new Date().toISOString().slice(0, 10);
+    const upcoming = periodes.filter(p => !p.deadline_leverancier || p.deadline_leverancier >= now);
+    const past = periodes.filter(p => p.deadline_leverancier && p.deadline_leverancier < now);
+
+    return <Modal title="Periode kiezen" onClose={onClose} wide>
+      <SelHeader />
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t3)", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>
+        Selecteer periode(s) <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>— meerdere mogelijk</span>
+      </div>
+
+      {periodes.length === 0 ? (
+        <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>
+          Geen periodes beschikbaar voor dit middel
         </div>
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t3)", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>Kies een formaat</div>
-      <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", overflow: "hidden" }}>
-        {selMiddel.formaten.map((f, i) => {
-          const lk = isLinked(selMiddel.pakketnaam + ":" + f.formaat);
-          return <div key={i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < selMiddel.formaten.length - 1 ? "1px solid var(--b)" : "none", gap: 14, opacity: lk ? 0.4 : 1 }}
-            onMouseEnter={e => { if (!lk) e.currentTarget.style.background = "var(--tug)"; }}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{f.formaat}</span>
+      ) : (
+        <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
+          {upcoming.length > 0 && upcoming.map((p, i) => {
+            const key = `${p.jaar}-${p.maand}`;
+            const selected = selPeriodes.find(x => `${x.jaar}-${x.maand}` === key);
+            return <div key={key + i} onClick={() => togglePeriode(p)}
+              style={{
+                display: "flex", alignItems: "center", padding: "10px 16px", gap: 12, cursor: "pointer",
+                borderBottom: "1px solid var(--b)",
+                background: selected ? "var(--tul)" : "transparent",
+                transition: "background .1s"
+              }}
+              onMouseEnter={e => { if (!selected) e.currentTarget.style.background = "var(--tug)"; }}
+              onMouseLeave={e => { if (!selected) e.currentTarget.style.background = "transparent"; }}>
+              <div style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? "var(--tu)" : "var(--b2)"}`, background: selected ? "var(--tu)" : "var(--s)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                {selected && <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t2)", marginRight: 6 }}>{p.jaar}</span>
+                  {p.maand}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", fontSize: 12 }}>
+                {p.publicatiedatum && <div style={{ color: "var(--t2)" }}>Publicatie: {fmtD(p.publicatiedatum)}</div>}
+                {p.deadline_leverancier && <div style={{ color: "var(--a)", fontWeight: 600 }}>Deadline: {fmtD(p.deadline_leverancier)}</div>}
+              </div>
+            </div>;
+          })}
+          {past.length > 0 && (
+            <div>
+              <div style={{ padding: "8px 16px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", background: "var(--s2)", borderBottom: "1px solid var(--b)" }}>
+                Verlopen deadlines
+              </div>
+              {past.map((p, i) => {
+                const key = `${p.jaar}-${p.maand}`;
+                const selected = selPeriodes.find(x => `${x.jaar}-${x.maand}` === key);
+                return <div key={key + i} onClick={() => togglePeriode(p)}
+                  style={{
+                    display: "flex", alignItems: "center", padding: "10px 16px", gap: 12, cursor: "pointer",
+                    borderBottom: i < past.length - 1 ? "1px solid var(--b)" : "none", opacity: 0.6,
+                    background: selected ? "var(--rb)" : "transparent"
+                  }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${selected ? "var(--r)" : "var(--b2)"}`, background: selected ? "var(--r)" : "var(--s)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {selected && <span style={{ color: "#fff", fontSize: 12, fontWeight: 800 }}>✓</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t3)", marginRight: 6 }}>{p.jaar}</span>
+                      {p.maand}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: "right", fontSize: 12 }}>
+                    <div style={{ color: "var(--r)", fontWeight: 600 }}>Verlopen: {fmtD(p.deadline_leverancier)}</div>
+                  </div>
+                </div>;
+              })}
             </div>
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 600, color: "var(--t)" }}>€{fmt(f.tarief)}</span>
-            <Btn small primary={!lk} disabled={lk} onClick={() => selectFormaat(selMiddel, f)}>
-              {lk ? "Gekoppeld" : "Selecteren"}
-            </Btn>
-          </div>;
-        })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 16 }}>
-        <Btn small onClick={() => setSelMiddel(null)}>← Terug naar overzicht</Btn>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--b)" }}>
+        <Btn small onClick={goBack}>← Terug</Btn>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {selPeriodes.length > 0 && <span style={{ fontSize: 12, color: "var(--tu)", fontWeight: 600 }}>{selPeriodes.length} periode{selPeriodes.length !== 1 ? "s" : ""} geselecteerd</span>}
+          <Btn primary onClick={confirm}>
+            {selPeriodes.length > 0 ? `Toevoegen (${selPeriodes.length})` : "Toevoegen zonder periode"}
+          </Btn>
+        </div>
       </div>
     </Modal>;
   }
 
-  // ── MIDDEL PICKER (step 1) ──
+  // ── STEP 2: FORMAAT PICKER ──
+  if (step === "formaat") {
+    return <Modal title="Formaat kiezen" onClose={onClose} wide>
+      <SelHeader />
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t3)", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>Kies een formaat</div>
+      <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", overflow: "hidden" }}>
+        {selMiddel.formaten.map((ft, i) => {
+          const lk = isLinked(selMiddel.pakketnaam + ":" + ft.formaat);
+          return <div key={i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < selMiddel.formaten.length - 1 ? "1px solid var(--b)" : "none", gap: 14, opacity: lk ? 0.4 : 1, cursor: lk ? "default" : "pointer" }}
+            onClick={() => { if (!lk) goToPeriode(selMiddel, ft); }}
+            onMouseEnter={e => { if (!lk) e.currentTarget.style.background = "var(--tug)"; }}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{ft.formaat}</span>
+              {lk && <span style={{ fontSize: 11, color: "var(--t3)", marginLeft: 8 }}>(gekoppeld)</span>}
+            </div>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 600, color: "var(--t)" }}>€{fmt(ft.tarief)}</span>
+            {!lk && <span style={{ fontSize: 12, color: "var(--tu)", fontWeight: 600 }}>Kies →</span>}
+          </div>;
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 16 }}>
+        <Btn small onClick={goBack}>← Terug naar overzicht</Btn>
+      </div>
+    </Modal>;
+  }
+
+  // ── STEP 1: MIDDEL PICKER ──
   return <Modal title="Middel selecteren" onClose={onClose} wide>
     <Filters vals={f} onChange={(k, v) => setF(p => ({ ...p, [k]: v }))} defs={[
       { key: "marketingmiddel", placeholder: "Alle marketingmiddelen", opts: allMM },
@@ -1208,29 +1361,31 @@ function SelModal({ onSelect, onClose, existing, toast }) {
       {fl.length === 0 && <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>Geen middelen gevonden</div>}
       {fl.map((m, i) => {
         const hasFormaten = m.formaten.length > 0;
+        const hasPeriodes = m.periodes.length > 0;
         const tarief = hasFormaten
           ? `€${fmt(Math.min(...m.formaten.map(f => f.tarief)))} – €${fmt(Math.max(...m.formaten.map(f => f.tarief)))}`
           : m.basistarief != null ? `€${fmt(m.basistarief)}` : "—";
         const lk = !hasFormaten && isLinked(m.pakketnaam);
-        return <div key={m._id || i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < fl.length - 1 ? "1px solid var(--b)" : "none", opacity: lk ? 0.4 : 1, gap: 14 }}
+        return <div key={m._id || i} style={{ display: "flex", alignItems: "center", padding: "12px 16px", borderBottom: i < fl.length - 1 ? "1px solid var(--b)" : "none", opacity: lk ? 0.4 : 1, gap: 14, cursor: lk ? "default" : "pointer" }}
+          onClick={() => { if (!lk) goToFormaat(m); }}
           onMouseEnter={e => { if (!lk) e.currentTarget.style.background = "var(--tug)"; }}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>
               {m.pakketnaam}
               {lk && <span style={{ fontSize: 11, color: "var(--t3)" }}> (gekoppeld)</span>}
-              {hasFormaten && <span style={{ fontSize: 11, color: "var(--bl)", fontWeight: 500, marginLeft: 6 }}>{m.formaten.length} formaten</span>}
             </div>
-            <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>
-              {m.marketingmiddel} · {m.segment || "—"} · {tarief}
+            <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              <span>{m.marketingmiddel} · {m.segment || "—"} · {tarief}</span>
+              {hasFormaten && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{m.formaten.length} formaten</span>}
+              {hasPeriodes && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "var(--ab)", color: "var(--a)", fontWeight: 600 }}>{m.periodes.length} periodes</span>}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {m.doorbelasting && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "var(--tul)", color: "var(--tu2)", fontWeight: 700 }}>DB</span>}
-            <Btn small primary={!lk} disabled={lk}
-              onClick={() => { if (!lk) selectMiddel(m); }}>
-              {lk ? "Gekoppeld" : hasFormaten ? "Kies formaat →" : "Toevoegen"}
-            </Btn>
+            {!lk && <span style={{ fontSize: 12, color: "var(--tu)", fontWeight: 600, whiteSpace: "nowrap" }}>
+              {hasFormaten ? "Kies formaat →" : hasPeriodes ? "Kies periode →" : "Selecteer →"}
+            </span>}
           </div>
         </div>;
       })}
