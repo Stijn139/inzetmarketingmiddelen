@@ -205,8 +205,6 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
   const [history, setHistory] = useState([]);
   const [noteText, setNoteText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [d, setD] = useState({ status: row.status });
   const [notesLoaded, setNotesLoaded] = useState(false);
 
   const overdue = isOverdue(row.deadline);
@@ -1349,8 +1347,8 @@ function exportGeneriekeTemplate() {
   const headerRows = [
     ["Marketingplanner 2026–2027 — Technische Unie"],
     [""],
-    ["Vul hieronder uw gegevens in en selecteer de gewenste marketingmiddelen."],
-    ["Kies 'JA' bij Deelname voor de middelen waaraan u wilt deelnemen. Laat de rest leeg."],
+    ["Vul hieronder uw gegevens in en selecteer per rij de gewenste marketingmiddelen."],
+    ["Kies eerst een marketingmiddel (kolom B), de overige velden worden automatisch gefilterd."],
     ["Prijzen, plaatsing en deadlines zijn onder voorbehoud. Zie tabblad 'Tarieven' voor meer informatie."],
     [""],
     ["Leveranciersnummer:", "", "", "Bedrijfsnaam:"],
@@ -1358,28 +1356,14 @@ function exportGeneriekeTemplate() {
     [""],
   ];
 
-  const hdr = ["", "Marketingmiddel", "Pakketnaam", "Periode", "Deadline", "Deelname", "Formaat", "Thema / product / assortiment"];
+  const hdr = ["", "Marketingmiddel", "Pakketnaam", "Periode", "Deadline", "Formaat", "Tarief"];
+  // Empty input rows — leverancier fills these in
   const rows = [];
-  let rowNum = 0;
-
-  MIGRATION.middelen.forEach(m => {
-    const hasFmt = m.formaten.length > 0;
-    if (m.periodes.length > 0) {
-      m.periodes.forEach(p => {
-        rowNum++;
-        const periode = `${p.maand} ${p.jaar}`;
-        const dl = p.deadline_leverancier || "";
-        rows.push([rowNum, m.marketingmiddel, m.pakketnaam, periode, dl, "", hasFmt ? "" : "n.v.t.", ""]);
-      });
-    } else {
-      rowNum++;
-      rows.push([rowNum, m.marketingmiddel, m.pakketnaam, "—", "—", "", hasFmt ? "" : "n.v.t.", ""]);
-    }
-  });
+  for (let i = 0; i < 30; i++) rows.push([i + 1, "", "", "", "", "", ""]);
 
   const ws1 = XLSX.utils.aoa_to_sheet([...headerRows, hdr, ...rows]);
-  ws1["!cols"] = [{ wch: 4 }, { wch: 28 }, { wch: 44 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 40 }];
-  ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+  ws1["!cols"] = [{ wch: 5 }, { wch: 32 }, { wch: 48 }, { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 16 }];
+  ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
   XLSX.utils.book_append_sheet(wb, ws1, "Inschrijving");
 
   // ── TAB 2: Tarieven overzicht ──
@@ -1477,13 +1461,13 @@ function ImportModal({ onImport, onClose, toast, leveranciers }) {
       const dataStartRow = parseInt(meta.data_start_row) || 10;
       const inschrijving = XLSX.utils.sheet_to_json(wb.Sheets["Inschrijving"], { range: dataStartRow - 1 });
 
-      // Filter rows where leverancier chose JA
+      // Filter rows where leverancier has filled in a pakketnaam (= deelname)
       const keuzes = inschrijving.filter(row => {
-        const keuze = String(row["Deelname"] || "").trim().toUpperCase();
-        return keuze === "JA";
+        const pn = String(row["Pakketnaam"] || "").trim();
+        return pn && pn !== "—" && pn !== "";
       }).map(row => {
-        const pn = row["Pakketnaam"] || "";
-        const formaat = row["Formaat"] && row["Formaat"] !== "n.v.t." ? row["Formaat"] : null;
+        const pn = String(row["Pakketnaam"] || "").trim();
+        const formaat = row["Formaat"] && String(row["Formaat"]).trim() !== "n.v.t." && String(row["Formaat"]).trim() !== "" ? String(row["Formaat"]).trim() : null;
         const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === pn);
         let tarief = 0;
         if (migMiddel) {
@@ -1494,11 +1478,15 @@ function ImportModal({ onImport, onClose, toast, leveranciers }) {
             tarief = migMiddel.basistarief || 0;
           }
         }
+        // Also try to read tarief from the Excel if VLOOKUP resolved
+        const excelTarief = row["Tarief"];
+        if (excelTarief && typeof excelTarief === "number" && excelTarief > 0) tarief = excelTarief;
+
         return {
           marketingmiddel: row["Marketingmiddel"] || "",
-          pakketnaam: pn, periode: row["Periode"] || "",
-          deadline: row["Deadline"] || "", formaat, tarief,
-          thema: row["Thema / product / assortiment"] || "",
+          pakketnaam: pn,
+          periode: row["Periode"] || "",
+          formaat, tarief,
         };
       });
 
@@ -1610,11 +1598,11 @@ function ImportModal({ onImport, onClose, toast, leveranciers }) {
           <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>Geen middelen met "JA" gevonden. De leverancier heeft niets geselecteerd.</div>
         ) : (
           <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", maxHeight: 280, overflow: "auto", marginBottom: 12 }}>
-            <table><thead><tr><Th>Pakketnaam</Th><Th>Periode</Th><Th>Formaat</Th><Th>Tarief</Th><Th>Thema</Th></tr></thead>
+            <table><thead><tr><Th>Pakketnaam</Th><Th>Periode</Th><Th>Formaat</Th><Th>Tarief</Th></tr></thead>
               <tbody>{preview.keuzes.map((k, i) => (
                 <tr key={i} style={{ borderBottom: i < preview.keuzes.length - 1 ? "1px solid var(--b)" : "none" }}>
                   <Td bold>{k.pakketnaam}</Td><Td>{k.periode || "—"}</Td><Td>{k.formaat || "—"}</Td>
-                  <Td mono>€{fmt(k.tarief)}</Td><Td><span style={{ fontSize: 12, color: "var(--t3)" }}>{k.thema || "—"}</span></Td>
+                  <Td mono>€{fmt(k.tarief)}</Td>
                 </tr>
               ))}</tbody>
             </table>
@@ -1873,7 +1861,6 @@ function SelModal({ onSelect, onClose, existing, toast }) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {m.doorbelasting && <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "var(--tul)", color: "var(--tu2)", fontWeight: 700 }}>DB</span>}
             {!lk && <span style={{ fontSize: 12, color: "var(--tu)", fontWeight: 600, whiteSpace: "nowrap" }}>
               {hasFormaten ? "Kies formaat →" : hasPeriodes ? "Kies periode →" : "Selecteer →"}
             </span>}
