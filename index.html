@@ -897,7 +897,7 @@ function PlannersPage({ toast, role }) {
       } else {
         // Add one entry per selected periode
         for (const p of periodes) {
-          const periodeLabel = `${p.jaar} ${p.maand}`;
+          const periodeLabel = `${p.maand} ${p.jaar}`;
           await db.post("planner_marketingmiddel", {
             planner_id: detail.id,
             marketingmiddel_id: midId,
@@ -1268,8 +1268,7 @@ function SelModal({ onSelect, onClose, existing, toast }) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t2)", marginRight: 6 }}>{p.jaar}</span>
-                  {p.maand}
+                  {p.maand} <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t2)" }}>{p.jaar}</span>
                 </div>
               </div>
               <div style={{ textAlign: "right", fontSize: 12 }}>
@@ -1297,8 +1296,7 @@ function SelModal({ onSelect, onClose, existing, toast }) {
                   </div>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontWeight: 600, fontSize: 14 }}>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t3)", marginRight: 6 }}>{p.jaar}</span>
-                      {p.maand}
+                      {p.maand} <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--t3)" }}>{p.jaar}</span>
                     </span>
                   </div>
                   <div style={{ textAlign: "right", fontSize: 12 }}>
