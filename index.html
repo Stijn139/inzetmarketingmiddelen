@@ -455,6 +455,65 @@ function SearchableDropdown({ value, options, onChange, placeholder, allowNew, d
 }
 
 // ============================================================
+// FormaatRow — isolated component for stable inline editing
+// ============================================================
+function FormaatRow({ f, i, isInkoop, allFmt, mid, onUpdate, onRemove, last }) {
+  const [customMode, setCustomMode] = useState(false);
+  const [customVal, setCustomVal] = useState("");
+
+  function handleSelect(e) {
+    const v = e.target.value;
+    if (v === "__new__") {
+      setCustomMode(true);
+      setCustomVal("");
+    } else {
+      onUpdate(mid, i, "formaat", v);
+    }
+  }
+
+  function confirmCustom() {
+    if (customVal.trim()) {
+      onUpdate(mid, i, "formaat", customVal.trim());
+      setCustomMode(false);
+      setCustomVal("");
+    }
+  }
+
+  return <tr style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
+    <td style={{ padding: "8px 16px", width: "50%" }}>
+      {isInkoop ? <span style={{ fontSize: 14 }}>{f.formaat}</span>
+        : customMode ? (
+          <div style={{ display: "flex", gap: 4 }}>
+            <input value={customVal} onChange={e => setCustomVal(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") confirmCustom(); if (e.key === "Escape") setCustomMode(false); }}
+              placeholder="Nieuw formaat..." autoFocus
+              style={{ flex: 1, padding: "7px 10px", fontSize: 13 }} />
+            <Btn small primary onClick={confirmCustom}>✓</Btn>
+            <Btn small onClick={() => setCustomMode(false)}>✕</Btn>
+          </div>
+        ) : (
+          <select value={f.formaat} onChange={handleSelect}
+            style={{ width: "100%", padding: "9px 36px 9px 12px", fontSize: 14 }}>
+            {!f.formaat && <option value="">Kies formaat...</option>}
+            {allFmt.map(o => <option key={o} value={o}>{o}</option>)}
+            {f.formaat && !allFmt.includes(f.formaat) && <option value={f.formaat}>{f.formaat}</option>}
+            <option value="__new__">+ Nieuw formaat...</option>
+          </select>
+        )}
+    </td>
+    <td style={{ padding: "8px 16px" }}>
+      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(f.tarief)}</span>
+        : <input type="number" step="0.01" value={f.tarief}
+            onChange={e => onUpdate(mid, i, "tarief", parseFloat(e.target.value) || 0)}
+            style={{ width: 140, fontFamily: "'JetBrains Mono',monospace" }} />}
+    </td>
+    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
+      <Btn small danger onClick={() => onRemove(mid, i)}>✕</Btn>
+    </td>}
+  </tr>;
+}
+
+// ============================================================
 // MIDDELEN PAGE — 3-level structure with migration data
 // ============================================================
 function MiddelenPage({ toast, role }) {
@@ -515,7 +574,7 @@ function MiddelenPage({ toast, role }) {
     setDetail(prev => prev && prev._id === mid ? { ...prev, formaten: prev.formaten.filter((_, i) => i !== idx) } : prev);
   }
   function addPeriode(mid) {
-    const np = { jaar: 2026, maand: "", publicatiedatum: null, deadline_leverancier: null };
+    const np = { jaar: 2026, maand: "", publicatiedatum: null, deadline_leverancier: null, totale_capaciteit: 0, gereserveerd: 0 };
     setItems(prev => prev.map(m => m._id === mid ? { ...m, periodes: [...m.periodes, np] } : m));
     setDetail(prev => prev && prev._id === mid ? { ...prev, periodes: [...prev.periodes, np] } : prev);
   }
@@ -580,19 +639,8 @@ function MiddelenPage({ toast, role }) {
               <thead><tr><Th>Formaat</Th><Th>Tarief</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
               <tbody>
                 {d.formaten.map((f, i) => (
-                  <tr key={i} style={{ borderBottom: i < d.formaten.length - 1 ? "1px solid var(--b)" : "none" }}>
-                    <td style={{ padding: "8px 16px", width: "50%" }}>
-                      {isInkoop ? <span style={{ fontSize: 14 }}>{f.formaat}</span>
-                        : <SearchableDropdown value={f.formaat} options={allFmt} onChange={v => updateFormaat(d._id, i, "formaat", v)} placeholder="Kies formaat" />}
-                    </td>
-                    <td style={{ padding: "8px 16px" }}>
-                      {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(f.tarief)}</span>
-                        : <input type="number" step="0.01" value={f.tarief} onChange={e => updateFormaat(d._id, i, "tarief", parseFloat(e.target.value) || 0)} style={{ width: 140, fontFamily: "'JetBrains Mono',monospace" }} />}
-                    </td>
-                    {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
-                      <Btn small danger onClick={() => removeFormaat(d._id, i)}>✕</Btn>
-                    </td>}
-                  </tr>
+                  <FormaatRow key={i} f={f} i={i} isInkoop={isInkoop} allFmt={allFmt} mid={d._id}
+                    onUpdate={updateFormaat} onRemove={removeFormaat} last={i === d.formaten.length - 1} />
                 ))}
               </tbody>
             </table>
@@ -624,10 +672,12 @@ function MiddelenPage({ toast, role }) {
         {d.periodes.length === 0 ? <Empty text="Nog geen capaciteitsperiodes" /> : (
           <div style={{ overflowX: "auto" }}>
             <table>
-              <thead><tr><Th>Jaar</Th><Th>Maand / Periode</Th><Th>Publicatiedatum</Th><Th>Deadline leverancier</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
+              <thead><tr><Th>Jaar</Th><Th>Maand / Periode</Th><Th>Publicatiedatum</Th><Th>Deadline leverancier</Th><Th>Capaciteit</Th>{!isInkoop && <Th style={{ width: 50 }}></Th>}</tr></thead>
               <tbody>
                 {d.periodes.map((p, i) => {
                   const dlOverdue = p.deadline_leverancier && new Date(p.deadline_leverancier) < new Date();
+                  const cap = p.totale_capaciteit || 0;
+                  const res = p.gereserveerd || 0;
                   return <tr key={i} style={{ borderBottom: i < d.periodes.length - 1 ? "1px solid var(--b)" : "none" }}>
                     <td style={{ padding: "8px 16px" }}>
                       {isInkoop ? <span style={{ fontSize: 14, fontFamily: "'JetBrains Mono',monospace" }}>{p.jaar}</span>
@@ -647,6 +697,20 @@ function MiddelenPage({ toast, role }) {
                           {p.deadline_leverancier ? fmtD(p.deadline_leverancier) : "—"}{dlOverdue ? " ⚠" : ""}
                         </span>
                       ) : <input type="date" value={p.deadline_leverancier || ""} onChange={e => updatePeriode(d._id, i, "deadline_leverancier", e.target.value || null)} />}
+                    </td>
+                    <td style={{ padding: "8px 16px", minWidth: 160 }}>
+                      {isInkoop ? (
+                        cap > 0 ? <CapBar used={res} total={cap} /> : <span style={{ fontSize: 12, color: "var(--t3)" }}>—</span>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input type="number" min="0" value={res} onChange={e => updatePeriode(d._id, i, "gereserveerd", parseInt(e.target.value) || 0)}
+                            style={{ width: 50, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "6px 4px" }} title="Gereserveerd" />
+                          <span style={{ color: "var(--t3)", fontSize: 12 }}>/</span>
+                          <input type="number" min="0" value={cap} onChange={e => updatePeriode(d._id, i, "totale_capaciteit", parseInt(e.target.value) || 0)}
+                            style={{ width: 50, fontFamily: "'JetBrains Mono',monospace", textAlign: "center", padding: "6px 4px" }} title="Totale capaciteit" />
+                          {cap > 0 && <div style={{ width: 60 }}><CapBar used={res} total={cap} /></div>}
+                        </div>
+                      )}
                     </td>
                     {!isInkoop && <td style={{ padding: "8px 16px", textAlign: "center" }}>
                       <Btn small danger onClick={() => removePeriode(d._id, i)}>✕</Btn>
