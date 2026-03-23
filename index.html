@@ -1158,17 +1158,6 @@ function PlannersPage({ toast, role }) {
         <StatCard label="Totaal tarief" value={`€${fmt(tot)}`} delay={100} />
       </div>
 
-      {/* Export / Import bar */}
-      <Card style={{ padding: "14px 24px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-        <div style={{ fontSize: 13, color: "var(--t2)" }}>
-          <span style={{ fontWeight: 600, color: "var(--t)" }}>Leveranciers-template</span> — exporteer een invulbaar Excel-bestand of importeer een ingevulde versie
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn small onClick={() => exportLeverancierTemplate(detail, pm)}>Exporteer template</Btn>
-          {!isMkt && !locked && <Btn small primary onClick={() => setImportModal(true)}>Importeer inschrijving</Btn>}
-        </div>
-      </Card>
-
       {tablesOk === false && (
         <div style={{ background: "var(--ab)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "var(--rds)", padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span>💡</span>
@@ -1188,43 +1177,6 @@ function PlannersPage({ toast, role }) {
           : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>}
       </Card>
       {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.gekozen_formaat ? r.marketingmiddel?.pakketnaam + ":" + r.gekozen_formaat : r.marketingmiddel?.pakketnaam)} toast={toast} />}
-      {importModal && <ImportModal
-        plannerId={detail.id}
-        onImport={async (keuzes, meta) => {
-          for (const k of keuzes) {
-            // Find or create middel in Supabase
-            let midId;
-            try {
-              const existing = await db.get("marketingmiddel", { eq: { pakketnaam: k.pakketnaam }, limit: 1 });
-              if (existing.length > 0) { midId = existing[0].id; }
-              else {
-                const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === k.pakketnaam);
-                const created = await db.post("marketingmiddel", {
-                  pakketnaam: k.pakketnaam, rubriek: migMiddel?.rubriek || "", segment: migMiddel?.segment || "",
-                  tarief: k.tarief || 0, formaat: k.formaat || "", type_campagne: migMiddel?.rubriek || ""
-                });
-                midId = created[0].id;
-              }
-              // Parse periode for startdatum/deadline
-              const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === k.pakketnaam);
-              let periodeMatch = null;
-              if (k.periode && k.periode !== "—" && migMiddel) {
-                periodeMatch = migMiddel.periodes.find(p => `${p.maand} ${p.jaar}` === k.periode);
-              }
-              await db.post("planner_marketingmiddel", {
-                planner_id: detail.id, marketingmiddel_id: midId, status: "Gepland",
-                gekozen_formaat: k.formaat || null, gekozen_tarief: k.tarief || null,
-                gekozen_periode: k.periode && k.periode !== "—" ? k.periode : null,
-                startdatum: periodeMatch?.publicatiedatum || null,
-                deadline: periodeMatch?.deadline_leverancier || null
-              });
-            } catch (e) { console.error("Import row error:", e); }
-          }
-          loadPm(detail.id);
-        }}
-        onClose={() => setImportModal(false)}
-        toast={toast}
-      />}
     </div>;
   }
 
@@ -1238,7 +1190,9 @@ function PlannersPage({ toast, role }) {
         <p style={{ fontSize: 13, color: "var(--t3)", marginTop: 2 }}>{filtered.length} planners</p>
       </div>
       <div style={{ display: "flex", gap: 6 }}>
-        <Btn onClick={exportXLSX}>Export (.xlsx)</Btn>
+        <Btn onClick={exportGeneriekeTemplate}>Template (.xlsx)</Btn>
+        {!isMkt && <Btn onClick={() => setImportModal(true)}>Importeer inschrijving</Btn>}
+        <Btn onClick={exportXLSX}>Export planners</Btn>
         {!isMkt && <Btn primary onClick={() => setModal(true)}>+ Nieuwe planner</Btn>}
       </div>
     </div>
@@ -1252,6 +1206,54 @@ function PlannersPage({ toast, role }) {
         <Stat label="Totaal tarief" value={"€" + fmt(filtered.reduce((s, p) => s + getTotTarief(p.id), 0))} />
       </div>
     )}
+
+    {/* ImportModal on main level — creates a new planner */}
+    {importModal && <ImportModal
+      leveranciers={levs}
+      toast={toast}
+      onClose={() => setImportModal(false)}
+      onImport={async ({ leverancier_id, titel, type, keuzes }) => {
+        // 1. Create the planner
+        const res = await db.post("leveranciers_marketing_planner", { leverancier_id, titel, type, status: "Concept" });
+        const plannerId = res[0].id;
+
+        // 2. Add each keuze as planner_marketingmiddel
+        for (const k of keuzes) {
+          let midId;
+          try {
+            const existing = await db.get("marketingmiddel", { eq: { pakketnaam: k.pakketnaam }, limit: 1 });
+            if (existing.length > 0) { midId = existing[0].id; }
+            else {
+              const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === k.pakketnaam);
+              const created = await db.post("marketingmiddel", {
+                pakketnaam: k.pakketnaam, rubriek: migMiddel?.rubriek || "", segment: migMiddel?.segment || "",
+                tarief: k.tarief || 0, formaat: k.formaat || "", type_campagne: migMiddel?.rubriek || ""
+              });
+              midId = created[0].id;
+            }
+            const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === k.pakketnaam);
+            let periodeMatch = null;
+            if (k.periode && k.periode !== "—" && migMiddel) {
+              periodeMatch = migMiddel.periodes.find(p => `${p.maand} ${p.jaar}` === k.periode);
+            }
+            await db.post("planner_marketingmiddel", {
+              planner_id: plannerId, marketingmiddel_id: midId, status: "Gepland",
+              gekozen_formaat: k.formaat || null, gekozen_tarief: k.tarief || null,
+              gekozen_periode: k.periode && k.periode !== "—" ? k.periode : null,
+              startdatum: periodeMatch?.publicatiedatum || null,
+              deadline: periodeMatch?.deadline_leverancier || null
+            });
+          } catch (e) { console.error("Import row:", e); }
+        }
+
+        toast(`Planner "${titel}" aangemaakt met ${keuzes.length} middelen`);
+        load();
+
+        // Navigate to the new planner
+        const full = await db.get("leveranciers_marketing_planner", { select: "*,leverancier:leverancier_id(bedrijfsnaam,leveranciernummer)", eq: { id: plannerId } });
+        if (full[0]) setDetail(full[0]);
+      }}
+    />}
 
     {loading
       ? <Card style={{ padding: 0 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ padding: "16px 20px", borderBottom: "1px solid var(--b)" }}><div className="sk" style={{ width: "50%", marginBottom: 6 }} /><div className="sk" style={{ width: "25%" }} /></div>)}</Card>
@@ -1337,120 +1339,89 @@ function PlannerForm({ levs, onSave, onClose }) {
 }
 
 // ============================================================
-// Export leveranciers-template (.xlsx)
+// Export generieke leveranciers-template (.xlsx)
 // ============================================================
-function exportLeverancierTemplate(planner, middelenList) {
+function exportGeneriekeTemplate() {
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
-  const levNaam = planner.leverancier?.bedrijfsnaam || "Onbekend";
-  const levNr = planner.leverancier?.leveranciernummer || "";
-  const plannerTitel = planner.titel || "";
-  const templateVersion = "1.0";
-  const templateId = `TPL-${planner.id?.slice(0, 8) || Date.now()}`;
 
-  // Collect all MIGRATION middelen with their periodes for the dropdown options
-  const allPakketten = [...new Set(MIGRATION.middelen.map(m => m.pakketnaam))];
-  const allFormaten = MIGRATION.dropdowns.formaten;
+  // ── TAB 1: Inschrijving ──
+  const headerRows = [
+    ["Marketingplanner 2026–2027 — Technische Unie"],
+    [""],
+    ["Vul hieronder uw gegevens in en selecteer de gewenste marketingmiddelen."],
+    ["Kies 'JA' bij Deelname voor de middelen waaraan u wilt deelnemen. Laat de rest leeg."],
+    ["Prijzen, plaatsing en deadlines zijn onder voorbehoud. Zie tabblad 'Tarieven' voor meer informatie."],
+    [""],
+    ["Leveranciersnummer:", "", "", "Bedrijfsnaam:"],
+    ["Contactpersoon:", "", "", "E-mailadres:"],
+    [""],
+  ];
 
-  // ── TAB 1: Inschrijving (editable) ──
-  const hdr = ["Marketingmiddel", "Pakketnaam", "Periode", "Deadline leverancier", "Pakketkeuze", "Formaat", "Thema / product omschrijving"];
+  const hdr = ["", "Marketingmiddel", "Pakketnaam", "Periode", "Deadline", "Deelname", "Formaat", "Thema / product / assortiment"];
   const rows = [];
+  let rowNum = 0;
 
-  // Build rows from MIGRATION data — one row per middel-periode combination
   MIGRATION.middelen.forEach(m => {
-    if (m.periodes.length === 0) {
-      rows.push([m.marketingmiddel, m.pakketnaam, "—", "—", "", m.formaten.length > 0 ? "" : "n.v.t.", ""]);
-    } else {
+    const hasFmt = m.formaten.length > 0;
+    if (m.periodes.length > 0) {
       m.periodes.forEach(p => {
-        const deadline = p.deadline_leverancier ? p.deadline_leverancier : "—";
+        rowNum++;
         const periode = `${p.maand} ${p.jaar}`;
-        rows.push([m.marketingmiddel, m.pakketnaam, periode, deadline, "", m.formaten.length > 0 ? "" : "n.v.t.", ""]);
+        const dl = p.deadline_leverancier || "";
+        rows.push([rowNum, m.marketingmiddel, m.pakketnaam, periode, dl, "", hasFmt ? "" : "n.v.t.", ""]);
       });
+    } else {
+      rowNum++;
+      rows.push([rowNum, m.marketingmiddel, m.pakketnaam, "—", "—", "", hasFmt ? "" : "n.v.t.", ""]);
     }
   });
 
-  const ws1 = XLSX.utils.aoa_to_sheet([
-    ["Marketingplanner — Technische Unie", "", "", "", "", "", ""],
-    [""],
-    ["Leverancier:", levNaam, "", "Leveranciernummer:", levNr, "", ""],
-    ["Planner:", plannerTitel, "", "", "", "", ""],
-    [""],
-    ["Instructies: vul de groene kolommen in. Kies een pakket bij 'Pakketkeuze' en een formaat waar van toepassing."],
-    ["Laat de rij leeg als u niet wilt deelnemen aan dat middel/periode."],
-    [""],
-    hdr,
-    ...rows
-  ]);
-
-  // Column widths
-  ws1["!cols"] = [
-    { wch: 28 },  // Marketingmiddel
-    { wch: 46 },  // Pakketnaam
-    { wch: 20 },  // Periode
-    { wch: 18 },  // Deadline
-    { wch: 14 },  // Pakketkeuze
-    { wch: 16 },  // Formaat
-    { wch: 40 },  // Thema
-  ];
-
-  // Merge title row
-  ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
-
+  const ws1 = XLSX.utils.aoa_to_sheet([...headerRows, hdr, ...rows]);
+  ws1["!cols"] = [{ wch: 4 }, { wch: 28 }, { wch: 44 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 16 }, { wch: 40 }];
+  ws1["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
   XLSX.utils.book_append_sheet(wb, ws1, "Inschrijving");
 
-  // ── TAB 2: Overzicht tarieven (read-only reference) ──
+  // ── TAB 2: Tarieven overzicht ──
   const hdr2 = ["Marketingmiddel", "Pakketnaam", "Formaat", "Tarief (EUR)", "Rubriek", "Segment", "Doorbelasting PN"];
   const rows2 = [];
   MIGRATION.middelen.forEach(m => {
     if (m.formaten.length > 0) {
-      m.formaten.forEach(f => {
-        rows2.push([m.marketingmiddel, m.pakketnaam, f.formaat, f.tarief, m.rubriek, m.segment, m.doorbelasting ? "Ja" : "Nee"]);
-      });
+      m.formaten.forEach(f => rows2.push([m.marketingmiddel, m.pakketnaam, f.formaat, f.tarief, m.rubriek, m.segment, m.doorbelasting ? "Ja" : "Nee"]));
     } else {
       rows2.push([m.marketingmiddel, m.pakketnaam, "—", m.basistarief || 0, m.rubriek, m.segment, m.doorbelasting ? "Ja" : "Nee"]);
     }
   });
   const ws2 = XLSX.utils.aoa_to_sheet([hdr2, ...rows2]);
-  ws2["!cols"] = [{ wch: 28 }, { wch: 46 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 36 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, ws2, "Tarieven overzicht");
+  ws2["!cols"] = [{ wch: 28 }, { wch: 44 }, { wch: 12 }, { wch: 14 }, { wch: 26 }, { wch: 36 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws2, "Tarieven");
 
-  // ── TAB 3: Data (hidden, metadata for import) ──
+  // ── TAB 3: Data (metadata for import) ──
   const ws3 = XLSX.utils.aoa_to_sheet([
-    ["template_version", templateVersion],
-    ["template_id", templateId],
-    ["planner_id", planner.id || ""],
-    ["leverancier_id", planner.leverancier_id || ""],
-    ["leverancier_naam", levNaam],
-    ["leverancier_nummer", levNr],
-    ["planner_titel", plannerTitel],
+    ["template_version", "1.0"],
+    ["template_id", "MKPL-2026-2027"],
     ["export_datum", new Date().toISOString().slice(0, 10)],
-    [""],
-    ["Pakketkeuze opties:"],
-    ["JA"],
-    ["NEE"],
-    [""],
-    ["Formaat opties:"],
-    ...allFormaten.map(f => [f]),
-    [""],
-    ["Pakketnamen:"],
-    ...allPakketten.map(p => [p]),
+    ["data_start_row", 10],
+    ["leverancier_nr_cell", "B7"],
+    ["leverancier_naam_cell", "E7"],
+    ["contactpersoon_cell", "B8"],
+    ["email_cell", "E8"],
   ]);
   XLSX.utils.book_append_sheet(wb, ws3, "Data");
 
-  // Generate filename
-  const date = new Date().toISOString().slice(0, 10);
-  const safeName = levNaam.replace(/[^a-zA-Z0-9\s\-]/g, "").replace(/\s+/g, "_");
-  XLSX.writeFile(wb, `Marketingplanner_${safeName}_${date}.xlsx`);
+  XLSX.writeFile(wb, `Marketingplanner_2026-2027_Template.xlsx`);
 }
 
 // ============================================================
-// ImportModal — import ingevulde leveranciers-template
+// ImportModal — importeer ingevulde template → maakt nieuwe planner aan
 // ============================================================
-function ImportModal({ onImport, onClose, toast, plannerId }) {
+function ImportModal({ onImport, onClose, toast, leveranciers }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [levMatch, setLevMatch] = useState(null);
+  const [plannerTitel, setPlannerTitel] = useState("");
 
   async function handleFile(e) {
     const f = e.target.files[0];
@@ -1458,79 +1429,116 @@ function ImportModal({ onImport, onClose, toast, plannerId }) {
     setFile(f);
     setError(null);
     setPreview(null);
+    setLevMatch(null);
+    setPlannerTitel("");
 
     try {
       const data = await f.arrayBuffer();
       const wb = XLSX.read(data);
 
-      // Check for Data sheet with metadata
-      if (!wb.SheetNames.includes("Data")) {
-        setError("Dit bestand bevat geen 'Data' tabblad. Gebruik een geëxporteerde template.");
-        return;
-      }
       if (!wb.SheetNames.includes("Inschrijving")) {
-        setError("Dit bestand bevat geen 'Inschrijving' tabblad.");
+        setError("Dit bestand bevat geen 'Inschrijving' tabblad. Gebruik de geëxporteerde template.");
         return;
       }
 
-      // Read metadata
-      const dataSh = XLSX.utils.sheet_to_json(wb.Sheets["Data"], { header: 1 });
-      const meta = {};
-      dataSh.forEach(row => { if (row[0] && row[1] !== undefined) meta[row[0]] = row[1]; });
-
-      if (!meta.template_version) {
-        setError("Ongeldige template: geen versie-informatie gevonden.");
-        return;
+      // Read metadata from Data sheet (if present)
+      let meta = {};
+      if (wb.SheetNames.includes("Data")) {
+        const dataSh = XLSX.utils.sheet_to_json(wb.Sheets["Data"], { header: 1 });
+        dataSh.forEach(row => { if (row[0] && row[1] !== undefined) meta[row[0]] = row[1]; });
       }
 
-      // Read inschrijving
-      const inschrijving = XLSX.utils.sheet_to_json(wb.Sheets["Inschrijving"], { range: 8 });
+      // Read leverancier info from header area
+      const rawSheet = XLSX.utils.sheet_to_json(wb.Sheets["Inschrijving"], { header: 1 });
+      let levNr = "", levNaam = "", contact = "", email = "";
 
-      // Filter rows where leverancier has made a choice (Pakketkeuze = "JA")
+      // Row 7 (index 6): Leveranciersnummer + Bedrijfsnaam
+      if (rawSheet[6]) {
+        levNr = String(rawSheet[6][1] || "").trim();
+        levNaam = String(rawSheet[6][4] || "").trim();
+      }
+      // Row 8 (index 7): Contactpersoon + E-mail
+      if (rawSheet[7]) {
+        contact = String(rawSheet[7][1] || "").trim();
+        email = String(rawSheet[7][4] || "").trim();
+      }
+
+      // Try to match leverancier
+      if (levNr && leveranciers) {
+        const match = leveranciers.find(l => String(l.leveranciernummer) === levNr);
+        if (match) setLevMatch(match);
+      }
+      if (!levMatch && levNaam && leveranciers) {
+        const match = leveranciers.find(l => l.bedrijfsnaam.toLowerCase().includes(levNaam.toLowerCase()));
+        if (match) setLevMatch(match);
+      }
+
+      // Read inschrijving data (skip header rows)
+      const dataStartRow = parseInt(meta.data_start_row) || 10;
+      const inschrijving = XLSX.utils.sheet_to_json(wb.Sheets["Inschrijving"], { range: dataStartRow - 1 });
+
+      // Filter rows where leverancier chose JA
       const keuzes = inschrijving.filter(row => {
-        const keuze = String(row["Pakketkeuze"] || "").trim().toUpperCase();
+        const keuze = String(row["Deelname"] || "").trim().toUpperCase();
         return keuze === "JA";
-      }).map(row => ({
-        marketingmiddel: row["Marketingmiddel"] || "",
-        pakketnaam: row["Pakketnaam"] || "",
-        periode: row["Periode"] || "",
-        deadline: row["Deadline leverancier"] || "",
-        formaat: row["Formaat"] && row["Formaat"] !== "n.v.t." ? row["Formaat"] : null,
-        thema: row["Thema / product omschrijving"] || "",
-      }));
-
-      // Find tarief for each keuze from MIGRATION data
-      const keuzesMapped = keuzes.map(k => {
-        const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === k.pakketnaam);
+      }).map(row => {
+        const pn = row["Pakketnaam"] || "";
+        const formaat = row["Formaat"] && row["Formaat"] !== "n.v.t." ? row["Formaat"] : null;
+        const migMiddel = MIGRATION.middelen.find(m => m.pakketnaam === pn);
         let tarief = 0;
         if (migMiddel) {
-          if (k.formaat && migMiddel.formaten.length > 0) {
-            const fmt = migMiddel.formaten.find(f => f.formaat === k.formaat);
+          if (formaat && migMiddel.formaten.length > 0) {
+            const fmt = migMiddel.formaten.find(f => f.formaat === formaat);
             tarief = fmt ? fmt.tarief : 0;
           } else {
             tarief = migMiddel.basistarief || 0;
           }
         }
-        return { ...k, tarief };
+        return {
+          marketingmiddel: row["Marketingmiddel"] || "",
+          pakketnaam: pn, periode: row["Periode"] || "",
+          deadline: row["Deadline"] || "", formaat, tarief,
+          thema: row["Thema / product / assortiment"] || "",
+        };
       });
 
+      const titel = levNaam ? `Jaarplan ${levNaam} 2026` : "Geïmporteerde planner";
+      setPlannerTitel(titel);
+
       setPreview({
-        meta,
-        keuzes: keuzesMapped,
+        meta, levNr, levNaam, contact, email, keuzes,
         totaalRijen: inschrijving.length,
-        totaalTarief: keuzesMapped.reduce((s, k) => s + k.tarief, 0)
+        totaalTarief: keuzes.reduce((s, k) => s + k.tarief, 0)
       });
     } catch (err) {
       setError("Fout bij het lezen van het bestand: " + err.message);
     }
   }
 
+  // Try to match leverancier when preview changes
+  useEffect(() => {
+    if (preview && leveranciers) {
+      if (preview.levNr) {
+        const m = leveranciers.find(l => String(l.leveranciernummer) === String(preview.levNr));
+        if (m) { setLevMatch(m); return; }
+      }
+      if (preview.levNaam) {
+        const m = leveranciers.find(l => l.bedrijfsnaam.toLowerCase().includes(preview.levNaam.toLowerCase()));
+        if (m) setLevMatch(m);
+      }
+    }
+  }, [preview, leveranciers]);
+
   async function doImport() {
-    if (!preview) return;
+    if (!preview || !levMatch) return;
     setImporting(true);
     try {
-      await onImport(preview.keuzes, preview.meta);
-      toast(`${preview.keuzes.length} middelen geïmporteerd`);
+      await onImport({
+        leverancier_id: levMatch.id,
+        titel: plannerTitel,
+        type: "Jaarafspraak",
+        keuzes: preview.keuzes
+      });
       onClose();
     } catch (err) {
       toast("Import mislukt: " + err.message, "error");
@@ -1550,26 +1558,37 @@ function ImportModal({ onImport, onClose, toast, plannerId }) {
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t)" }}>
           {file ? file.name : "Klik of sleep een .xlsx bestand hierheen"}
         </div>
-        <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 4 }}>Gebruik een geëxporteerde template</div>
+        <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 4 }}>Gebruik de geëxporteerde Marketingplanner template</div>
         <input id="import-file-input" type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
       </div>
     </div>
 
-    {/* Error */}
-    {error && (
-      <div style={{ padding: "12px 16px", background: "var(--rb)", border: "1px solid rgba(239,68,68,.3)", borderRadius: "var(--rds)", color: "var(--r)", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-        {error}
-      </div>
-    )}
+    {error && <div style={{ padding: "12px 16px", background: "var(--rb)", border: "1px solid rgba(239,68,68,.3)", borderRadius: "var(--rds)", color: "var(--r)", fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{error}</div>}
 
-    {/* Preview */}
     {preview && (
       <div>
-        {/* Meta info */}
+        {/* Leverancier match */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-          <div style={{ background: "var(--s2)", borderRadius: "var(--rds)", padding: "12px 16px" }}>
+          <div style={{ background: levMatch ? "var(--tul)" : "var(--ab)", borderRadius: "var(--rds)", padding: "12px 16px", border: `1px solid ${levMatch ? "rgba(0,124,49,.2)" : "rgba(245,158,11,.3)"}` }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", color: "var(--t3)", marginBottom: 4 }}>Leverancier</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{preview.meta.leverancier_naam} <span style={{ color: "var(--t3)", fontFamily: "'JetBrains Mono',monospace", fontSize: 12 }}>#{preview.meta.leverancier_nummer}</span></div>
+            {levMatch ? (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--tu2)" }}>{levMatch.bedrijfsnaam}</div>
+                <div style={{ fontSize: 12, color: "var(--t3)", fontFamily: "'JetBrains Mono',monospace" }}>#{levMatch.leveranciernummer}</div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--a)" }}>Leverancier niet gevonden</div>
+                <div style={{ fontSize: 12, color: "var(--t3)" }}>Nr: {preview.levNr || "—"} · Naam: {preview.levNaam || "—"}</div>
+                <div style={{ marginTop: 8 }}>
+                  <select onChange={e => { const l = leveranciers.find(x => x.id === e.target.value); setLevMatch(l || null); }}
+                    style={{ fontSize: 12, padding: "6px 10px", width: "100%" }}>
+                    <option value="">Selecteer handmatig...</option>
+                    {leveranciers.map(l => <option key={l.id} value={l.id}>{l.bedrijfsnaam} #{l.leveranciernummer}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ background: "var(--s2)", borderRadius: "var(--rds)", padding: "12px 16px" }}>
             <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", color: "var(--t3)", marginBottom: 4 }}>Samenvatting</div>
@@ -1577,48 +1596,40 @@ function ImportModal({ onImport, onClose, toast, plannerId }) {
               <strong style={{ color: "var(--tu)" }}>{preview.keuzes.length}</strong> van {preview.totaalRijen} middelen geselecteerd
               <span style={{ marginLeft: 10, fontFamily: "'JetBrains Mono',monospace", fontWeight: 600 }}>€{fmt(preview.totaalTarief)}</span>
             </div>
+            {preview.contact && <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 4 }}>Contact: {preview.contact} · {preview.email}</div>}
           </div>
         </div>
 
-        {/* Keuzes table */}
+        {/* Planner title */}
+        <Field label="Planner titel">
+          <input value={plannerTitel} onChange={e => setPlannerTitel(e.target.value)} placeholder="Bijv. Jaarplan Schneider 2026" />
+        </Field>
+
+        {/* Keuzes preview */}
         {preview.keuzes.length === 0 ? (
-          <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>
-            Geen middelen met "JA" gevonden in het bestand. De leverancier heeft niets geselecteerd.
-          </div>
+          <div style={{ padding: "24px 16px", textAlign: "center", color: "var(--t3)", fontSize: 13 }}>Geen middelen met "JA" gevonden. De leverancier heeft niets geselecteerd.</div>
         ) : (
-          <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", maxHeight: 320, overflow: "auto", marginBottom: 16 }}>
-            <table>
-              <thead><tr>
-                <Th>Pakketnaam</Th><Th>Periode</Th><Th>Formaat</Th><Th>Tarief</Th><Th>Thema</Th>
-              </tr></thead>
-              <tbody>
-                {preview.keuzes.map((k, i) => (
-                  <tr key={i} style={{ borderBottom: i < preview.keuzes.length - 1 ? "1px solid var(--b)" : "none" }}>
-                    <Td bold>{k.pakketnaam}</Td>
-                    <Td>{k.periode || "—"}</Td>
-                    <Td>{k.formaat || "—"}</Td>
-                    <Td mono>€{fmt(k.tarief)}</Td>
-                    <Td><span style={{ fontSize: 12, color: "var(--t3)" }}>{k.thema || "—"}</span></Td>
-                  </tr>
-                ))}
-              </tbody>
+          <div style={{ border: "1px solid var(--b)", borderRadius: "var(--rds)", maxHeight: 280, overflow: "auto", marginBottom: 12 }}>
+            <table><thead><tr><Th>Pakketnaam</Th><Th>Periode</Th><Th>Formaat</Th><Th>Tarief</Th><Th>Thema</Th></tr></thead>
+              <tbody>{preview.keuzes.map((k, i) => (
+                <tr key={i} style={{ borderBottom: i < preview.keuzes.length - 1 ? "1px solid var(--b)" : "none" }}>
+                  <Td bold>{k.pakketnaam}</Td><Td>{k.periode || "—"}</Td><Td>{k.formaat || "—"}</Td>
+                  <Td mono>€{fmt(k.tarief)}</Td><Td><span style={{ fontSize: 12, color: "var(--t3)" }}>{k.thema || "—"}</span></Td>
+                </tr>
+              ))}</tbody>
             </table>
           </div>
         )}
 
-        {/* Template info */}
-        <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 16 }}>
-          Template v{preview.meta.template_version} · ID: {preview.meta.template_id} · Geëxporteerd: {preview.meta.export_datum}
-        </div>
+        {preview.meta.template_version && <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 8 }}>Template v{preview.meta.template_version} · Geëxporteerd: {preview.meta.export_datum || "—"}</div>}
       </div>
     )}
 
-    {/* Actions */}
     <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid var(--b)" }}>
       <Btn onClick={onClose}>Annuleren</Btn>
-      {preview && preview.keuzes.length > 0 && (
+      {preview && preview.keuzes.length > 0 && levMatch && plannerTitel && (
         <Btn primary disabled={importing} onClick={doImport}>
-          {importing ? "Importeren..." : `Importeer ${preview.keuzes.length} middelen`}
+          {importing ? "Importeren..." : `Planner aanmaken (${preview.keuzes.length} middelen)`}
         </Btn>
       )}
     </div>
