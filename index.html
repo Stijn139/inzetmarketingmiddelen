@@ -198,26 +198,36 @@ function isOverdue(d) { return d && new Date(d) < new Date(); }
 // ============================================================
 // PmRow
 // ============================================================
-function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
-  const [open, setOpen] = useState(false);
+// ============================================================
+// INSTRUCTIES VOOR REFACTOR INTERNE APP
+// ============================================================
+// 
+// WIJZIGING 1: Vervang de hele PmRow component (regel ~170-270 in de <script>)
+//              met de onderstaande PmRow + GroupedMiddelen
+//
+// WIJZIGING 2: In PlannersPage, vervang in de planner detail view:
+//   ZOEK:   {pm.length === 0
+//             ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
+//             : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>}
+//
+//   VERVANG DOOR:
+//           <GroupedMiddelen items={pm} locked={locked} onUpdate={updMiddel} onRemove={rmMiddel} toast={toast} tablesOk={tablesOk} isMkt={isMkt} />
+//
+// ============================================================
+// PmRow — expandable details panel per item (Details/Opmerkingen/Historie)
+// Nu ZONDER Periode/Deadline/Tarief/Status in Details (die staan in de tabel)
+// ============================================================
+function PmRow({ row, locked, onUpdate, onRemove, toast, tablesOk }) {
   const [tab, setTab] = useState("details");
   const [notes, setNotes] = useState([]);
   const [history, setHistory] = useState([]);
   const [noteText, setNoteText] = useState("");
   const [saving, setSaving] = useState(false);
-  const [notesLoaded, setNotesLoaded] = useState(false);
-
-  const overdue = isOverdue(row.deadline);
-  const period = row.gekozen_periode || fmtPeriod(row.startdatum, row.einddatum);
-  const deadline = fmtD(row.deadline);
-  const statusStyle = stm[row.status] || { fg: "var(--t3)" };
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!open || notesLoaded) return;
-    loadNotes();
-    loadHistory();
-    setNotesLoaded(true);
-  }, [open]);
+    if (!loaded) { loadNotes(); loadHistory(); setLoaded(true); }
+  }, []);
 
   async function loadNotes() {
     try { setNotes(await db.get("planner_middel_notities", { eq: { planner_middel_id: row.id }, order: "created_at.desc" })); }
@@ -235,133 +245,186 @@ function PmRow({ row, locked, onUpdate, onRemove, last, toast, tablesOk }) {
       setNoteText("");
       await loadNotes();
       toast("Opmerking opgeslagen");
-    } catch { toast("Tabel 'planner_middel_notities' bestaat nog niet — zie SQL tip", "error"); }
+    } catch { toast("Tabel 'planner_middel_notities' bestaat nog niet", "error"); }
     setSaving(false);
   }
 
-  return (
-    <div style={{ borderBottom: last ? "none" : "1px solid var(--b)" }}>
-      <div
-        onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "stretch", cursor: "pointer", transition: "background .1s", background: open ? "var(--tug)" : "transparent" }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.background = "var(--tug)"; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
-      >
-        <div style={{ width: 4, background: statusStyle.fg, flexShrink: 0 }} />
-        <div style={{ flex: 1, padding: "14px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: "var(--t)", flex: 1, lineHeight: 1.3 }}>{row.marketingmiddel?.pakketnaam}{row.gekozen_formaat && <span style={{ fontWeight: 500, color: "var(--bl)", marginLeft: 6 }}>({row.gekozen_formaat})</span>}</span>
-            <Badge status={row.status} />
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 600, color: "var(--t2)" }}>€{fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}</span>
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-            {period && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--t2)", background: "var(--s2)", borderRadius: 4, padding: "3px 8px", border: "1px solid var(--b)" }}>📅 {period}</span>}
-            {deadline && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: overdue ? "var(--r)" : "var(--a)", background: overdue ? "var(--rb)" : "var(--ab)", border: `1px solid ${overdue ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`, borderRadius: 4, padding: "3px 8px" }}>{overdue ? "⚠️ Verlopen:" : "⏱ Deadline:"} {deadline}</span>}
-            {notes.length > 0 && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--t3)", background: "var(--s2)", borderRadius: 4, padding: "3px 7px", border: "1px solid var(--b)" }}>💬 {notes.length}</span>}
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", padding: "0 14px", color: "var(--t3)", flexShrink: 0 }}>
-          <span style={{ transform: open ? "rotate(90deg)" : "rotate(0)", transition: "transform .2s", display: "block", fontSize: 20 }}>›</span>
+  return <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
+    {/* Tabs */}
+    <div style={{ display: "flex", background: "var(--s)", borderBottom: "1px solid var(--b)", padding: "0 20px" }}>
+      {[["details", "Details"], ["notes", `Opmerkingen${notes.length ? ` (${notes.length})` : ""}`], ["history", `Historie${history.length ? ` (${history.length})` : ""}`]].map(([id, label]) => (
+        <button key={id} onClick={e => { e.stopPropagation(); setTab(id); }} style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: tab === id ? 700 : 400, color: tab === id ? "var(--tu)" : "var(--t3)", borderBottom: `2px solid ${tab === id ? "var(--tu)" : "transparent"}`, transition: "all .15s", marginBottom: -1 }}>{label}</button>
+      ))}
+      <div style={{ flex: 1 }} />
+      {!locked && <div style={{ display: "flex", alignItems: "center" }} onClick={e => e.stopPropagation()}>
+        <Btn small ghost onClick={() => onRemove(row)} style={{ color: "var(--r)", fontSize: 11, padding: "4px 8px" }}>verwijderen</Btn>
+      </div>}
+    </div>
+
+    {/* Details tab — ZONDER Periode/Deadline/Tarief/Status (die staan al in de tabel) */}
+    {tab === "details" && (
+      <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
+          {!locked && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>Status wijzigen</div>
+              <select value={row.status} onChange={e => { e.stopPropagation(); onUpdate(row, { status: e.target.value }); }}
+                style={{ padding: "5px 30px 5px 10px", fontSize: 13, fontWeight: 600, borderRadius: 6,
+                  color: (stm[row.status] || {}).fg || "var(--t2)",
+                  borderColor: (stm[row.status] || {}).fg || "var(--b)",
+                  background: (stm[row.status] || {}).bg || "var(--s2)",
+                  width: "auto", minWidth: 130 }}>
+                {["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          {[["Formaat", row.gekozen_formaat || "—"], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
+            <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
+          ))}
         </div>
       </div>
+    )}
 
-      {open && (
-        <div style={{ background: "var(--bg2)", borderTop: "1px solid var(--b)" }}>
-          <div style={{ display: "flex", background: "var(--s)", borderBottom: "1px solid var(--b)", padding: "0 20px" }}>
-            {[["details", "Details"], ["notes", `Opmerkingen${notes.length ? ` (${notes.length})` : ""}`], ["history", `Historie${history.length ? ` (${history.length})` : ""}`]].map(([id, label]) => (
-              <button key={id} onClick={e => { e.stopPropagation(); setTab(id); }} style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, fontWeight: tab === id ? 700 : 400, color: tab === id ? "var(--tu)" : "var(--t3)", borderBottom: `2px solid ${tab === id ? "var(--tu)" : "transparent"}`, transition: "all .15s", marginBottom: -1 }}>{label}</button>
-            ))}
-            <div style={{ flex: 1 }} />
-            {!locked && (
-              <div style={{ display: "flex", alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                <Btn small ghost onClick={() => onRemove(row)} style={{ color: "var(--r)", fontSize: 11, padding: "4px 8px" }}>verwijderen</Btn>
-              </div>
-            )}
+    {/* Opmerkingen tab */}
+    {tab === "notes" && (
+      <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
+        {!locked && (
+          <div style={{ marginBottom: 16 }}>
+            <textarea placeholder="Voeg een opmerking toe... (Ctrl+Enter om op te slaan)" value={noteText} onChange={e => setNoteText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) addNote(); }} />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <Btn small primary disabled={!noteText.trim() || saving} onClick={addNote}>{saving ? "Opslaan..." : "💬 Opmerking plaatsen"}</Btn>
+            </div>
           </div>
-
-          {tab === "details" && (
-            <div style={{ padding: "18px 20px" }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(155px,1fr))", gap: 14 }}>
-                {/* Status: direct dropdown when not locked, badge when locked */}
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>Status</div>
-                  {locked ? <Badge status={row.status} /> : (
-                    <select value={row.status} onChange={e => { e.stopPropagation(); onUpdate(row, { status: e.target.value }); }}
-                      style={{ padding: "5px 30px 5px 10px", fontSize: 13, fontWeight: 600, borderRadius: 6,
-                        color: (stm[row.status] || {}).fg || "var(--t2)",
-                        borderColor: (stm[row.status] || {}).fg || "var(--b)",
-                        background: (stm[row.status] || {}).bg || "var(--s2)",
-                        width: "auto", minWidth: 130
-                      }}>
-                      {["Gepland", "In uitvoering", "Afgerond", "Geannuleerd"].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  )}
+        )}
+        {notes.length === 0
+          ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>Nog geen opmerkingen geplaatst</div>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {notes.map(n => (
+              <div key={n.id} style={{ background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "12px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--tu2)" }}>{n.auteur || "Gebruiker"}</span>
+                  <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(n.created_at)}</span>
                 </div>
-                {[["Periode", period || "—"], ["Deadline", deadline ? <span style={{ color: overdue ? "var(--r)" : "var(--a)", fontWeight: 600 }}>{deadline}{overdue ? " ⚠" : ""}</span> : "—"], ["Formaat", row.gekozen_formaat || "—"], ["Tarief", `€ ${fmt(row.gekozen_tarief || row.marketingmiddel?.tarief || 0)}`], ["Rubriek", row.marketingmiddel?.rubriek || "—"], ["Segment", row.marketingmiddel?.segment || "—"]].map(([lbl, val]) => (
-                  <div key={lbl}><div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--t3)", marginBottom: 5 }}>{lbl}</div><div style={{ fontSize: 13 }}>{val}</div></div>
-                ))}
+                <p style={{ fontSize: 13, color: "var(--t)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{n.tekst}</p>
               </div>
-            </div>
-          )}
+            ))}
+          </div>}
+      </div>
+    )}
 
-          {tab === "notes" && (
-            <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
-              {!locked && (
-                <div style={{ marginBottom: 16 }}>
-                  <textarea placeholder="Voeg een opmerking toe... (Ctrl+Enter om op te slaan)" value={noteText} onChange={e => setNoteText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) addNote(); }} />
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                    <Btn small primary disabled={!noteText.trim() || saving} onClick={addNote}>{saving ? "Opslaan..." : "💬 Opmerking plaatsen"}</Btn>
-                  </div>
+    {/* Historie tab */}
+    {tab === "history" && (
+      <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
+        {history.length === 0
+          ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>
+              Nog geen wijzigingen vastgelegd
+              {tablesOk === false && <div style={{ marginTop: 6, fontSize: 11 }}>Voeg tabel <code style={{ background: "var(--s2)", padding: "1px 5px", borderRadius: 3 }}>planner_middel_historie</code> toe in Supabase</div>}
+            </div>
+          : <div style={{ position: "relative", paddingLeft: 2 }}>
+            <div style={{ position: "absolute", left: 14, top: 4, bottom: 4, width: 2, background: "var(--b)" }} />
+            {history.map(h => (
+              <div key={h.id} style={{ display: "flex", gap: 12, marginBottom: 12, position: "relative" }}>
+                <div style={{ width: 28, height: 28, borderRadius: 14, background: "var(--s)", border: "2px solid var(--b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
+                  <span style={{ fontSize: 11 }}>{h.actie === "status_gewijzigd" ? "🔄" : "✎"}</span>
                 </div>
-              )}
-              {notes.length === 0
-                ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>Nog geen opmerkingen geplaatst</div>
-                : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {notes.map(n => (
-                    <div key={n.id} style={{ background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "12px 14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--tu2)" }}>{n.auteur || "Gebruiker"}</span>
-                        <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(n.created_at)}</span>
-                      </div>
-                      <p style={{ fontSize: 13, color: "var(--t)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{n.tekst}</p>
-                    </div>
-                  ))}
-                </div>}
-            </div>
-          )}
-
-          {tab === "history" && (
-            <div style={{ padding: "16px 20px" }} onClick={e => e.stopPropagation()}>
-              {history.length === 0
-                ? <div style={{ textAlign: "center", padding: "20px 0", color: "var(--t3)", fontSize: 13 }}>
-                    Nog geen wijzigingen vastgelegd
-                    {tablesOk === false && <div style={{ marginTop: 6, fontSize: 11 }}>Voeg tabel <code style={{ background: "var(--s2)", padding: "1px 5px", borderRadius: 3 }}>planner_middel_historie</code> toe in Supabase</div>}
+                <div style={{ flex: 1, background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "10px 14px", marginTop: -1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{h.beschrijving}</span>
+                    <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(h.created_at)}</span>
                   </div>
-                : <div style={{ position: "relative", paddingLeft: 2 }}>
-                  <div style={{ position: "absolute", left: 14, top: 4, bottom: 4, width: 2, background: "var(--b)" }} />
-                  {history.map(h => (
-                    <div key={h.id} style={{ display: "flex", gap: 12, marginBottom: 12, position: "relative" }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 14, background: "var(--s)", border: "2px solid var(--b)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
-                        <span style={{ fontSize: 11 }}>{h.actie === "status_gewijzigd" ? "🔄" : "✎"}</span>
-                      </div>
-                      <div style={{ flex: 1, background: "var(--s)", borderRadius: 8, border: "1px solid var(--b)", padding: "10px 14px", marginTop: -1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600 }}>{h.beschrijving}</span>
-                          <span style={{ fontSize: 11, color: "var(--t3)" }}>{fmtTs(h.created_at)}</span>
-                        </div>
-                        {h.auteur && <span style={{ fontSize: 11, color: "var(--t3)" }}>{h.auteur}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+                  {h.auteur && <span style={{ fontSize: 11, color: "var(--t3)" }}>{h.auteur}</span>}
+                </div>
+              </div>
+            ))}
+          </div>}
+      </div>
+    )}
+  </div>;
 }
 
+// ============================================================
+// GroupedMiddelen — gegroepeerde tabelweergave zoals het portaal
+// Items worden gegroepeerd per middel+formaat, periodes als rijen
+// ============================================================
+function GroupedMiddelen({ items, locked, onUpdate, onRemove, toast, tablesOk, isMkt }) {
+  const [expandedRow, setExpandedRow] = useState(null);
+
+  // Groepeer items per middel+formaat
+  const grouped = {};
+  items.forEach(item => {
+    const mid = item.marketingmiddel || {};
+    const key = (mid.pakketnaam || "Overig") + (item.gekozen_formaat ? `|${item.gekozen_formaat}` : "");
+    if (!grouped[key]) grouped[key] = { naam: mid.pakketnaam || "Overig", formaat: item.gekozen_formaat, rubriek: mid.rubriek, segment: mid.segment, type: mid.type_campagne, items: [] };
+    grouped[key].items.push(item);
+  });
+
+  function dlColor(d) {
+    if (!d) return null;
+    const now = new Date();
+    const dl = new Date(d);
+    const days = Math.ceil((dl - now) / 86400000);
+    if (days < 0) return { bg: "var(--rb)", fg: "var(--r)", label: fmtD(d) + " !" };
+    if (days < 30) return { bg: "var(--ab)", fg: "var(--a)", label: fmtD(d) };
+    return { bg: "var(--tul)", fg: "var(--tu2)", label: fmtD(d) };
+  }
+
+  if (items.length === 0) return <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />;
+
+  return <div>
+    {Object.values(grouped).map((group, gi) => {
+      const groupTotal = group.items.reduce((s, m) => s + Number(m.gekozen_tarief || m.marketingmiddel?.tarief || 0), 0);
+      return <div key={gi} style={{ borderBottom: gi < Object.keys(grouped).length - 1 ? "2px solid var(--b)" : "none" }}>
+        {/* Groepsheader: middelnaam + formaat badge + aantal + totaal */}
+        <div style={{ padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--s2)", borderBottom: "1px solid var(--b)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--t)" }}>{group.naam}</span>
+            {group.formaat && <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: "var(--blb)", color: "var(--bl)", fontWeight: 600 }}>{group.formaat}</span>}
+            {group.rubriek && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 99, background: "var(--blb)", color: "var(--bl)", fontWeight: 500 }}>{group.rubriek}</span>}
+            <span style={{ fontSize: 12, color: "var(--t3)" }}>{group.items.length} {group.items.length === 1 ? "periode" : "periodes"}</span>
+          </div>
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 700, color: "var(--tu)" }}>€{fmt(groupTotal)}</span>
+        </div>
+
+        {/* Kolomheaders */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 140px 110px 100px 36px", padding: "8px 20px", fontSize: 11, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "1px solid var(--b)", background: "var(--s)" }}>
+          <span>Periode</span><span>Publicatie</span><span>Deadline</span><span>Status</span><span style={{ textAlign: "right" }}>Tarief</span><span></span>
+        </div>
+
+        {/* Periode-rijen */}
+        {group.items.map((item, i) => {
+          const dl = dlColor(item.deadline);
+          const period = item.gekozen_periode || fmtPeriod(item.startdatum, item.einddatum);
+          const isExpanded = expandedRow === item.id;
+          return <React.Fragment key={item.id}>
+            <div
+              onClick={() => setExpandedRow(isExpanded ? null : item.id)}
+              style={{
+                display: "grid", gridTemplateColumns: "1fr 120px 140px 110px 100px 36px",
+                padding: "12px 20px", alignItems: "center", cursor: "pointer",
+                borderBottom: (!isExpanded && i < group.items.length - 1) ? "1px solid var(--b)" : "none",
+                background: isExpanded ? "var(--tug)" : "transparent",
+                transition: "background .1s"
+              }}
+              onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = "var(--tug)"; }}
+              onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--t)" }}>{period || "—"}</span>
+              <span style={{ fontSize: 13, color: "var(--t2)" }}>{item.startdatum ? fmtD(item.startdatum) : "—"}</span>
+              <div>{dl ? <span style={{ fontSize: 12, fontWeight: 600, color: dl.fg, background: dl.bg, padding: "2px 10px", borderRadius: 4, display: "inline-block" }}>{dl.label}</span> : <span style={{ fontSize: 13, color: "var(--t3)" }}>—</span>}</div>
+              <div><Badge status={item.status} /></div>
+              <span style={{ fontSize: 13, textAlign: "right", color: "var(--t2)", fontFamily: "'JetBrains Mono',monospace" }}>€{fmt(item.gekozen_tarief || item.marketingmiddel?.tarief || 0)}</span>
+              <span style={{ color: "var(--t3)", fontSize: 16, textAlign: "center", transform: isExpanded ? "rotate(90deg)" : "rotate(0)", transition: "transform .15s" }}>›</span>
+            </div>
+            {/* Expanded: Details/Opmerkingen/Historie */}
+            {isExpanded && <div style={{ borderBottom: i < group.items.length - 1 ? "1px solid var(--b)" : "none" }}>
+              <PmRow row={item} locked={locked || isMkt} onUpdate={onUpdate} onRemove={onRemove} toast={toast} tablesOk={tablesOk} />
+            </div>}
+          </React.Fragment>;
+        })}
+      </div>;
+    })}
+  </div>;
+}
 
 // ============================================================
 // MIGRATION DATA (from Tarieven_tab.xlsx + Timing_Inzet_Marketingmiddelen.xlsx)
@@ -1168,9 +1231,7 @@ function PlannersPage({ toast, role }) {
           <h3 style={{ fontSize: 15, fontWeight: 700 }}>Middelen <span style={{ color: "var(--t3)", fontWeight: 400 }}>({pm.length})</span></h3>
           {!isMkt && !locked && <Btn small primary onClick={() => setSelModal(true)}>+ Toevoegen</Btn>}
         </div>
-        {pm.length === 0
-          ? <Empty icon="📋" text="Voeg middelen toe via de knop rechtsboven" />
-          : <div>{pm.map((r, i) => <PmRow key={r.id} row={r} locked={locked || isMkt} onUpdate={updMiddel} onRemove={rmMiddel} last={i === pm.length - 1} toast={toast} tablesOk={tablesOk} />)}</div>}
+       <GroupedMiddelen items={pm} locked={locked} onUpdate={updMiddel} onRemove={rmMiddel} toast={toast} tablesOk={tablesOk} isMkt={isMkt} />
       </Card>
       {selModal && <SelModal onSelect={addMiddel} onClose={() => setSelModal(false)} existing={pm.map(r => r.gekozen_formaat ? r.marketingmiddel?.pakketnaam + ":" + r.gekozen_formaat : r.marketingmiddel?.pakketnaam)} toast={toast} />}
     </div>;
